@@ -85,6 +85,28 @@ def _derive_prefix(project_name: str, slug: str) -> str:
     return prefix
 
 
+_SEGMENT = re.compile(r"^[a-z][a-z0-9]*$")
+
+
+def _validate(group: str, project_name: str, slug: str, prefix_lower: str, base_url: str) -> None:
+    """Reject identities that would generate invalid Kotlin/Gradle/package syntax."""
+    segments = group.split(".")
+    if len(segments) < 2 or not all(_SEGMENT.match(s) for s in segments):
+        raise ValueError(
+            f"invalid group {group!r}: need >=2 dot-separated segments of [a-z][a-z0-9]* (e.g. com.acme)"
+        )
+    if not re.match(r"^[A-Za-z][A-Za-z0-9]*$", project_name):
+        raise ValueError(
+            f"invalid app name: derived class name {project_name!r} is not a valid Kotlin identifier"
+        )
+    if not _SEGMENT.match(slug):
+        raise ValueError(f"invalid slug {slug!r}: need [a-z][a-z0-9]*")
+    if not _SEGMENT.match(prefix_lower):
+        raise ValueError(f"invalid prefix {prefix_lower!r}: need [a-z][a-z0-9]*")
+    if not base_url.startswith(("http://", "https://")):
+        raise ValueError(f"invalid base_url {base_url!r}: must start with http(s)://")
+
+
 def derive_identity(
     group: str,
     app_name: str,
@@ -98,6 +120,7 @@ def derive_identity(
     slug = (slug or _slug(app_name)).lower()
     prefix_lower = (prefix or _derive_prefix(project_name, slug)).lower()
     prefix_pascal = prefix_lower[:1].upper() + prefix_lower[1:]
+    _validate(group, project_name, slug, prefix_lower, base_url)
     return Identity(
         group=group,
         project_name=project_name,
@@ -129,14 +152,21 @@ def content_replacements(idn: Identity) -> list[tuple[str, str]]:
 
 
 def apply_replacements(text: str, repls: list[tuple[str, str]]) -> str:
-    for old, new in repls:
-        text = text.replace(old, new)
-    return text
+    """Single pass over the original text: an earlier rule's output is never itself
+    rewritten by a later rule (e.g. a user group `com.acme` colliding with the golden
+    plugin prefix `acme.`). Alternation is first-match-wins, so the list order still
+    decides ties between tokens sharing a prefix."""
+    if not repls:
+        return text
+    mapping = dict(repls)
+    pattern = re.compile("|".join(re.escape(old) for old, _ in repls))
+    return pattern.sub(lambda m: mapping[m.group(0)], text)
 
 
 def transform_relpath(rel_posix: str, idn: Identity) -> str:
     """Map a template-relative path to the generated path: relocate the package dir
-    chain, then apply the dotted/name replacements (catches the Room schema dir whose
-    name embeds the dotted package, and any identity literal in a file name)."""
-    rel_posix = rel_posix.replace(GOLDEN_PKG_PATH, idn.base_pkg_path)
-    return apply_replacements(rel_posix, content_replacements(idn))
+    chain and apply the dotted/name replacements (catches the Room schema dir whose
+    name embeds the dotted package, and any identity literal in a file name). One
+    combined pass so the relocated path is never re-tokenized."""
+    repls = [(GOLDEN_PKG_PATH, idn.base_pkg_path)] + content_replacements(idn)
+    return apply_replacements(rel_posix, repls)

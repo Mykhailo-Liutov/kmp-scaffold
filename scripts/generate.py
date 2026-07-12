@@ -63,28 +63,46 @@ IOS_ONLY_FILES = {
 
 FIREBASE_MARKER = "kmp-scaffold:firebase:"
 
+# Files expected to carry sentinel regions. Verified after copy so a re-extracted
+# template that lost its sentinels fails generation instead of silently keeping
+# Firebase config in a Firebase-off project.
+FIREBASE_SENTINEL_FILES = {
+    "build.gradle.kts",
+    "androidApp/build.gradle.kts",
+    "gradle/libs.versions.toml",
+    "iosApp/project.yml",
+    "iosApp/iosApp/iOSApp.swift",
+}
+
 
 def is_binary(path: Path) -> bool:
     return path.suffix.lower() in BINARY_EXTS
 
 
-def strip_firebase(text: str, firebase_enabled: bool) -> str:
+def strip_firebase(text: str, firebase_enabled: bool, rel: str) -> str:
     """Always remove the sentinel marker lines; drop the wrapped body only when
-    Firebase is disabled."""
+    Firebase is disabled. Malformed regions (unmatched or nested markers) abort
+    generation — failing open would silently mangle the file."""
     if FIREBASE_MARKER not in text:
         return text
     out: list[str] = []
-    dropping = False
-    for line in text.split("\n"):
+    in_region = False
+    for i, line in enumerate(text.split("\n"), start=1):
         if FIREBASE_MARKER + "begin" in line:
-            dropping = not firebase_enabled
+            if in_region:
+                raise ValueError(f"{rel}:{i}: nested firebase begin marker")
+            in_region = True
             continue
         if FIREBASE_MARKER + "end" in line:
-            dropping = False
+            if not in_region:
+                raise ValueError(f"{rel}:{i}: firebase end marker without begin")
+            in_region = False
             continue
-        if dropping:
+        if in_region and not firebase_enabled:
             continue
         out.append(line)
+    if in_region:
+        raise ValueError(f"{rel}: firebase begin marker never closed")
     return "\n".join(out)
 
 
@@ -99,6 +117,7 @@ def should_drop(rel: str, firebase: bool, android_only: bool) -> bool:
 def copy_tree(target: Path, idn: Identity, firebase: bool, android_only: bool) -> int:
     repls = content_replacements(idn)
     written = 0
+    sentinel_seen: set[str] = set()
     for dirpath, _dirnames, filenames in os.walk(TEMPLATE_DIR):
         for fn in filenames:
             abs_path = Path(dirpath) / fn
@@ -111,10 +130,22 @@ def copy_tree(target: Path, idn: Identity, firebase: bool, android_only: bool) -
                 shutil.copy2(abs_path, dest)
             else:
                 text = abs_path.read_text(encoding="utf-8")
-                text = strip_firebase(text, firebase)
+                if FIREBASE_MARKER in text:
+                    sentinel_seen.add(rel)
+                text = strip_firebase(text, firebase, rel)
                 text = apply_replacements(text, repls)
                 dest.write_text(text, encoding="utf-8")
             written += 1
+    expected = {
+        f for f in FIREBASE_SENTINEL_FILES
+        if not (android_only and (f in IOS_ONLY_FILES or f.startswith(IOS_ONLY_PREFIXES)))
+    }
+    if sentinel_seen != expected:
+        raise ValueError(
+            "firebase sentinel mismatch — template drifted (re-add sentinels after "
+            f"re-extraction). missing={sorted(expected - sentinel_seen)} "
+            f"unexpected={sorted(sentinel_seen - expected)}"
+        )
     return written
 
 
@@ -207,7 +238,8 @@ def seed_memories(target: Path) -> None:
 
 def git_init(target: Path) -> None:
     try:
-        subprocess.run(["git", "init", "-q"], cwd=target, check=True)
+        if not (target / ".git").exists():
+            subprocess.run(["git", "init", "-q"], cwd=target, check=True)
         subprocess.run(["git", "add", "-A"], cwd=target, check=True)
         subprocess.run(
             ["git", "commit", "-q", "-m", "Initial scaffold from kmp-cmp-scaffold"],
@@ -261,19 +293,24 @@ def main() -> int:
         print("error: 'group' and 'app_name' (--group / --name) are required", file=sys.stderr)
         return 2
 
-    idn = derive_identity(
-        group=cfg["group"],
-        app_name=cfg["app_name"],
-        base_url=cfg.get("base_url") or "https://dummyjson.com/",
-        slug=cfg.get("slug"),
-        prefix=cfg.get("prefix"),
-        app_display=cfg.get("app_display"),
-    )
+    try:
+        idn = derive_identity(
+            group=cfg["group"],
+            app_name=cfg["app_name"],
+            base_url=cfg.get("base_url") or "https://dummyjson.com/",
+            slug=cfg.get("slug"),
+            prefix=cfg.get("prefix"),
+            app_display=cfg.get("app_display"),
+        )
+    except ValueError as e:
+        print(f"error: {e}", file=sys.stderr)
+        return 2
     firebase = bool(cfg.get("firebase", False))
     android_only = bool(cfg.get("android_only", False))
 
     target = Path(args.target).resolve()
-    if target.exists() and any(target.iterdir()):
+    # A lone .git (user ran `git init` first) is fine; anything else is not.
+    if target.exists() and any(p.name != ".git" for p in target.iterdir()):
         print(f"error: target is not empty: {target}", file=sys.stderr)
         return 2
     target.mkdir(parents=True, exist_ok=True)
@@ -282,7 +319,11 @@ def main() -> int:
         print(f"error: template dir missing: {TEMPLATE_DIR}", file=sys.stderr)
         return 2
 
-    written = copy_tree(target, idn, firebase, android_only)
+    try:
+        written = copy_tree(target, idn, firebase, android_only)
+    except ValueError as e:
+        print(f"error: {e}", file=sys.stderr)
+        return 2
 
     # features: None / "default" -> keep the reference set as-is (exact replica).
     features = cfg.get("features")

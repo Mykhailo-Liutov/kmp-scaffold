@@ -21,7 +21,7 @@ import shutil
 import sys
 from pathlib import Path
 
-from lib_tokens import apply_replacements, content_replacements, derive_identity, transform_relpath
+from lib_tokens import GOLDEN_PKG_PATH, apply_replacements, content_replacements, derive_identity
 
 BINARY_EXTS = {".jar", ".keystore", ".png", ".jpg", ".jpeg", ".webp", ".ico", ".bin"}
 
@@ -69,9 +69,9 @@ def _renames(archetype: str, new_feature: str, new_noun: str | None) -> list[tup
 
 
 def _apply(text: str, pairs: list[tuple[str, str]]) -> str:
-    for old, new in pairs:
-        text = text.replace(old, new)
-    return text
+    # Single pass (see lib_tokens.apply_replacements): replacement output is never
+    # itself rewritten, so a new noun containing an archetype token can't cascade.
+    return apply_replacements(text, pairs)
 
 
 def clone_feature(target: Path, archetype: str, new_feature: str, new_noun: str | None = None) -> list[str]:
@@ -203,21 +203,22 @@ def add_capability(target: Path, capability: str, new_noun: str | None = None) -
             raise FileExistsError(f"capability module already exists: {dest}")
 
     idn = _infer_identity(target)
-    repls = content_replacements(idn)
-    name_pairs = _capability_renames(capability, new_noun)
+    # One combined pass: identity replacement output must not be re-tokenized by the
+    # archetype name pairs (e.g. an app literally named "Sample").
+    content_pairs = content_replacements(idn) + _capability_renames(capability, new_noun)
+    path_pairs = [(GOLDEN_PKG_PATH, idn.base_pkg_path)] + content_pairs
     created: list[str] = []
     for path in sorted(CAPABILITY_SRC.rglob("*")):
         if path.is_dir():
             continue
-        rel = path.relative_to(CAPABILITY_SRC).as_posix()
-        rel = _apply(transform_relpath(rel, idn), name_pairs)
+        rel = apply_replacements(path.relative_to(CAPABILITY_SRC).as_posix(), path_pairs)
         dest = target / rel
         dest.parent.mkdir(parents=True, exist_ok=True)
         if _is_binary(path):
             shutil.copy2(path, dest)
         else:
-            text = apply_replacements(path.read_text(encoding="utf-8"), repls)
-            dest.write_text(_apply(text, name_pairs), encoding="utf-8")
+            text = apply_replacements(path.read_text(encoding="utf-8"), content_pairs)
+            dest.write_text(text, encoding="utf-8")
         created.append(str(dest.relative_to(target)))
     return created
 

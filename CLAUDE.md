@@ -61,14 +61,19 @@ files (`FirebaseCrashReporter.kt`, `SwiftCrashReporter.swift`) in `FIREBASE_ONLY
 
 ## Invariants & gotchas (do not break these)
 
-1. **Replacement order is load-bearing.** `AcmeApp` must be replaced before `Acme` (substring);
-   `com.acmecorp.acmeapp` before bare `acmeapp`. The order lives in
-   `lib_tokens.content_replacements()`. Don't reorder casually.
+1. **Replacement is single-pass and order is load-bearing.** `apply_replacements` matches all
+   tokens in ONE regex pass over the original text — replacement output is never re-tokenized
+   (a user group like `com.acme` must not collide with the golden `acme.` prefix). Alternation is
+   first-match-wins, so within `lib_tokens.content_replacements()` order still decides ties
+   between tokens sharing a prefix (`AcmeApp` before `Acme`). Don't reorder casually, and never
+   revert to sequential `str.replace`.
 2. **Firebase regions are stripped by sentinel comments**, not pattern matching. Five template files
    wrap their Firebase-only lines in `kmp-scaffold:firebase:begin` … `:end`
    (`#` for toml/yaml, `//` for kt/gradle/swift): root `build.gradle.kts`,
    `androidApp/build.gradle.kts`, `gradle/libs.versions.toml`, `iosApp/project.yml`,
-   `iosApp/iosApp/iOSApp.swift`. After any `extract-template.py` run these are lost — re-add them.
+   `iosApp/iosApp/iOSApp.swift` (the manifest lives in `FIREBASE_SENTINEL_FILES` in `generate.py`;
+   generation FAILS if the set drifts or a region is unmatched/nested — after re-extraction,
+   re-add the sentinels AND keep that manifest in sync).
    `generate.py` always deletes the marker lines; deletes the wrapped body only when Firebase is off.
    Whole Firebase-only **files** (dropped when Firebase is off) are listed in `FIREBASE_ONLY_FILES`
    in `generate.py` — incl. `androidApp/.../FirebaseCrashReporter.kt` and
@@ -105,6 +110,13 @@ echo "sdk.dir=$HOME/Library/Android/sdk" > "$TMP/local.properties"
 
 # sanity: no stray golden literals should remain in a generated project (dummyjson is expected)
 grep -rIl -e acmecorp -e acmeapp -e AcmeApp -e Acme "$TMP" | grep -v gradle-wrapper.jar   # expect empty
+
+# REGRESSION (identity collides with golden tokens): `com.acme` must survive the
+# replacement pass un-cascaded — packages stay com.acme.fittrack, dirs match.
+TMP2=$(mktemp -d)/FitTrack
+python3 scripts/generate.py --target "$TMP2" --group com.acme --name FitTrack --no-git
+grep -rn "com.ft.fittrack" "$TMP2" && echo "CASCADE BUG" || echo "ok: no cascade"
+test -d "$TMP2/shared/src/commonMain/kotlin/com/acme/fittrack" && echo "ok: dirs match"
 
 # feature clone + (manual/agent) wire, then rebuild
 python3 scripts/feature_ops.py clone --target "$TMP" --archetype catalog --feature events --noun Event

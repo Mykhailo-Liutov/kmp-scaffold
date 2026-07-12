@@ -3,7 +3,8 @@
   "version": "0.1.0",
   "description": "Scaffold a new Kotlin Multiplatform + Compose Multiplatform app (Android + iOS) from a production-grade golden template, tailored to your org, name, and domain features.",
   "author": {
-    "name": "michael"
+    "name": "Mykhailo Liutov",
+    "url": "https://github.com/Mykhailo-Liutov"
   },
   "keywords": [
     "kotlin-multiplatform",
@@ -13,5 +14,8 @@
     "ios",
     "scaffold",
     "generator"
-  ]
+  ],
+  "homepage": "https://github.com/Mykhailo-Liutov/kmp-cmp-scaffold",
+  "repository": "https://github.com/Mykhailo-Liutov/kmp-cmp-scaffold",
+  "license": "Apache-2.0"
 }
