@@ -5,7 +5,8 @@ and `README.md` (end-user docs).
 
 ## Goal
 
-Let someone — possibly not a mobile expert — drop into an empty folder, run `/kmp-new`, answer a
+Let someone — possibly not a mobile expert — drop into an empty folder, run
+`/kmp-cmp-scaffold:kmp-new`, answer a
 short interview, and get the *generic architecture* of a private production KMP/CMP app (the
 golden source), tailored to their org / name / domain, that
 **compiles and runs with zero external accounts**. "Generic" = the golden project's app-specific
@@ -142,8 +143,10 @@ Re-run #1 as the regression gate after any generator change (commands in `CLAUDE
 
 ## Roadmap / open items
 
-- **Live interview run**: exercise `/kmp-new` end-to-end with the `kmp-feature-author` agent doing
-  the wiring (so far #3 was wired by hand to prove the path).
+- ~~**Live interview run**~~ DONE (2026-07-12): headless `claude -p "/kmp-cmp-scaffold:kmp-new ..."
+  --plugin-dir` run generated a travel-log app (`com.demoworks` / TripLog), the agent renamed
+  catalog→trips with a real Trip domain + tests, and the Android build + JVM-host tests passed.
+  Note: only the *fully qualified* command name resolves in headless runs.
 - **Full Android-only**: strip KMP iOS targets when iOS isn't wanted (for non-mac users).
 - **Optional `:core` trimming**: let apps without networking/DB drop `:core:network` / `:core:database`
   (mind `FeatureConventionPlugin`'s mandatory deps: common/designsystem/ui).

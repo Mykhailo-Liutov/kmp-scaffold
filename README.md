@@ -33,8 +33,11 @@ Or from a local clone:
 In an **empty folder**, run:
 
 ```
-/kmp-new
+/kmp-cmp-scaffold:kmp-new
 ```
+
+(Interactive sessions may also resolve the short form `/kmp-new`; the fully qualified name
+always works, including in headless `claude -p` runs.)
 
 Answer a short interview (app name, organization, what the app is about, Android-only vs Android+iOS,
 Firebase on/off). The plugin generates a compiling project, adapts feature modules to your domain,
