@@ -88,6 +88,13 @@ re-running it re-imports that machinery, which must then be re-stripped. To sync
 from golden, port it by hand (drop the Firebase/auth specifics). Details + the Firebase sentinel
 checklist live in `docs/DEVELOPMENT.md`.
 
+## Status
+
+**Beta.** The deterministic generator is gate-tested (generated projects build and pass JVM-host
+tests for several identities, Firebase on/off, feature/capability ops), but the full interactive
+interview → agent-wiring flow is young — expect rough edges, and treat generated CI/distribution
+lanes as stubs to finish. Feature `remove` is not build-preserving (it prints a cleanup checklist).
+
 ## Limitations / roadmap
 
 - **Android-only** mode drops the Xcode app + iOS CI but keeps the KMP iOS targets (the project stays

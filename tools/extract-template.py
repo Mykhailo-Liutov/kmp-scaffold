@@ -150,6 +150,19 @@ def main() -> int:
         return 2
 
     if out.exists():
+        # Refuse to recursively delete anything that doesn't look like a template
+        # output dir — a mistyped --out must not nuke an arbitrary directory.
+        plugin_root = Path(__file__).resolve().parent.parent
+        if out in (Path("/"), Path.home()) or out == plugin_root or src in (out, *out.parents):
+            print(f"error: refusing to delete {out}", file=sys.stderr)
+            return 2
+        if not (out / "settings.gradle.kts").exists():
+            print(
+                f"error: {out} exists but doesn't look like a previous template "
+                "(no settings.gradle.kts) — delete it yourself if intended",
+                file=sys.stderr,
+            )
+            return 2
         shutil.rmtree(out)
     out.mkdir(parents=True)
 

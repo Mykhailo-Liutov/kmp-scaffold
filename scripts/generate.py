@@ -41,10 +41,10 @@ BINARY_EXTS = {
 
 # Dropped (relative POSIX paths) when Firebase is disabled. Paths use the golden package
 # (pre-relocation) because should_drop() matches on the template-relative path.
+# NOTE: the Play / TestFlight distribution stubs are NOT Firebase-specific and always ship;
+# only the App-Distribution workflow is Firebase-only.
 FIREBASE_ONLY_FILES = {
     ".github/workflows/distribute-stage-android.yml",
-    ".github/workflows/distribute-prod-play.yml",
-    ".github/workflows/distribute-ios-testflight.yml",
     "androidApp/src/prod/google-services.json",
     "androidApp/src/stage/google-services.json",
     "androidApp/src/main/kotlin/com/acmecorp/acmeapp/android/FirebaseCrashReporter.kt",
@@ -63,15 +63,15 @@ IOS_ONLY_FILES = {
 
 FIREBASE_MARKER = "kmp-scaffold:firebase:"
 
-# Files expected to carry sentinel regions. Verified after copy so a re-extracted
-# template that lost its sentinels fails generation instead of silently keeping
-# Firebase config in a Firebase-off project.
+# Files expected to carry sentinel regions, with the exact region count. Verified after
+# copy so a re-extracted template that lost sentinels (whole files OR single regions)
+# fails generation instead of silently keeping Firebase config in a Firebase-off project.
 FIREBASE_SENTINEL_FILES = {
-    "build.gradle.kts",
-    "androidApp/build.gradle.kts",
-    "gradle/libs.versions.toml",
-    "iosApp/project.yml",
-    "iosApp/iosApp/iOSApp.swift",
+    "build.gradle.kts": 1,
+    "androidApp/build.gradle.kts": 3,
+    "gradle/libs.versions.toml": 4,
+    "iosApp/project.yml": 3,
+    "iosApp/iosApp/iOSApp.swift": 2,
 }
 
 
@@ -79,19 +79,22 @@ def is_binary(path: Path) -> bool:
     return path.suffix.lower() in BINARY_EXTS
 
 
-def strip_firebase(text: str, firebase_enabled: bool, rel: str) -> str:
+def strip_firebase(text: str, firebase_enabled: bool, rel: str) -> tuple[str, int]:
     """Always remove the sentinel marker lines; drop the wrapped body only when
     Firebase is disabled. Malformed regions (unmatched or nested markers) abort
-    generation — failing open would silently mangle the file."""
+    generation — failing open would silently mangle the file. Returns the stripped
+    text and the number of regions found."""
     if FIREBASE_MARKER not in text:
-        return text
+        return text, 0
     out: list[str] = []
     in_region = False
+    regions = 0
     for i, line in enumerate(text.split("\n"), start=1):
         if FIREBASE_MARKER + "begin" in line:
             if in_region:
                 raise ValueError(f"{rel}:{i}: nested firebase begin marker")
             in_region = True
+            regions += 1
             continue
         if FIREBASE_MARKER + "end" in line:
             if not in_region:
@@ -103,7 +106,7 @@ def strip_firebase(text: str, firebase_enabled: bool, rel: str) -> str:
         out.append(line)
     if in_region:
         raise ValueError(f"{rel}: firebase begin marker never closed")
-    return "\n".join(out)
+    return "\n".join(out), regions
 
 
 def should_drop(rel: str, firebase: bool, android_only: bool) -> bool:
@@ -117,7 +120,7 @@ def should_drop(rel: str, firebase: bool, android_only: bool) -> bool:
 def copy_tree(target: Path, idn: Identity, firebase: bool, android_only: bool) -> int:
     repls = content_replacements(idn)
     written = 0
-    sentinel_seen: set[str] = set()
+    sentinel_seen: dict[str, int] = {}
     for dirpath, _dirnames, filenames in os.walk(TEMPLATE_DIR):
         for fn in filenames:
             abs_path = Path(dirpath) / fn
@@ -130,21 +133,21 @@ def copy_tree(target: Path, idn: Identity, firebase: bool, android_only: bool) -
                 shutil.copy2(abs_path, dest)
             else:
                 text = abs_path.read_text(encoding="utf-8")
-                if FIREBASE_MARKER in text:
-                    sentinel_seen.add(rel)
-                text = strip_firebase(text, firebase, rel)
+                text, regions = strip_firebase(text, firebase, rel)
+                if regions:
+                    sentinel_seen[rel] = regions
                 text = apply_replacements(text, repls)
                 dest.write_text(text, encoding="utf-8")
             written += 1
     expected = {
-        f for f in FIREBASE_SENTINEL_FILES
+        f: n for f, n in FIREBASE_SENTINEL_FILES.items()
         if not (android_only and (f in IOS_ONLY_FILES or f.startswith(IOS_ONLY_PREFIXES)))
     }
     if sentinel_seen != expected:
         raise ValueError(
             "firebase sentinel mismatch — template drifted (re-add sentinels after "
-            f"re-extraction). missing={sorted(expected - sentinel_seen)} "
-            f"unexpected={sorted(sentinel_seen - expected)}"
+            f"re-extraction and keep FIREBASE_SENTINEL_FILES region counts in sync). "
+            f"expected={expected} found={sentinel_seen}"
         )
     return written
 

@@ -153,5 +153,15 @@ Re-run #1 as the regression gate after any generator change (commands in `CLAUDE
   these stubbed).
 - **`generate.py` feature manifest**: `realize()` exists but the skill currently prefers
   clone-then-agent-wire; flesh out manifest-driven generation if a fully headless path is wanted.
+- **Transactional generation**: generate into a staging dir, validate, then rename into place, so a
+  failed run never leaves a half-written target that blocks retry.
+- **Escaping-aware display values**: `app_display`/`base_url` are inserted verbatim into Kotlin, XML,
+  YAML and plist contexts; either restrict the charset harder or add context-aware escaping.
+- **Immutable feature archetypes**: `clone` currently copies `feature/catalog|home` from the *target*
+  project, so user edits mutate the archetype; ship plugin-side copies like the capability archetype.
+- **Deterministic standard wiring**: settings include / shared dep / Koin entry / nav facade+field are
+  mechanical once the tab-vs-flow decision is made — script them, leave only semantics to the agent.
+- **Generator test matrix in CI**: identities incl. collisions/keywords/unicode, Firebase on/off,
+  android-only, all feature ops, malformed sentinels, golden-token leak scan.
 - **Prefix collision check**: `derive_identity` could collide two-word names to the same prefix;
   consider validating/uniquifying.
