@@ -1,0 +1,17 @@
+{
+  "name": "kmp-cmp-scaffold",
+  "version": "0.1.0",
+  "description": "Scaffold a new Kotlin Multiplatform + Compose Multiplatform app (Android + iOS) from a production-grade golden template, tailored to your org, name, and domain features.",
+  "author": {
+    "name": "michael"
+  },
+  "keywords": [
+    "kotlin-multiplatform",
+    "kmp",
+    "compose-multiplatform",
+    "android",
+    "ios",
+    "scaffold",
+    "generator"
+  ]
+}

@@ -1,0 +1,53 @@
+name: Distribute iOS (TestFlight) [STUB]
+
+# STUB: compiles the prod scheme but does NOT archive/sign/upload — no App Store
+# Connect app record, signing certs, or API key exist yet. Replace the build +
+# TODO steps with the fastlane `beta_prod` lane (match → gym → pilot) once those
+# are set up. Manual trigger only.
+on:
+  workflow_dispatch:
+
+jobs:
+  testflight:
+    name: Build iOS prod (upload stubbed)
+    runs-on: macstadium
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      # The shared module configures its Android target during sync.
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Generate Xcode project
+        run: |
+          brew install xcodegen
+          xcodegen generate
+        working-directory: iosApp
+
+      # Placeholder: a no-signing simulator build (real archive needs match certs).
+      - name: Compile prod scheme (no signing)
+        working-directory: iosApp
+        run: |
+          set -o pipefail
+          xcodebuild build \
+            -project AcmeApp.xcodeproj \
+            -scheme AcmeApp-prod \
+            -configuration Release-prod \
+            -sdk iphonesimulator \
+            ARCHS=arm64 \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: TODO — TestFlight upload
+        run: |
+          echo "::warning::TestFlight upload not configured."
+          echo "Create the ASC app records, set up fastlane match + an App Store Connect"
+          echo "API key (.p8), then run the fastlane beta_prod lane (match/gym/pilot) here."

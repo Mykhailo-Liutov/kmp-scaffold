@@ -1,0 +1,6 @@
+# fastlane Appfile — fill in for iOS distribution. app_identifier is set per-lane
+# in the Fastfile (stage vs prod), so it's intentionally not set here.
+#
+# apple_id("you@example.com")   # ASC account — prefer the API key (.p8) for CI instead
+# itc_team_id("XXXXXXX")        # App Store Connect team id
+# team_id("XXXXXXXXXX")         # Apple Developer team id

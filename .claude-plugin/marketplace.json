@@ -1,0 +1,13 @@
+{
+  "name": "kmp-cmp-scaffold-marketplace",
+  "owner": {
+    "name": "michael"
+  },
+  "plugins": [
+    {
+      "name": "kmp-cmp-scaffold",
+      "source": "./",
+      "description": "Scaffold a new KMP/CMP app (Android + iOS) from a golden template, tailored to your domain."
+    }
+  ]
+}

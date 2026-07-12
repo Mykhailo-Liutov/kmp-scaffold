@@ -1,0 +1,60 @@
+name: Distribute Prod (Google Play) [STUB]
+
+# STUB: builds the prod AAB but does NOT upload — the Play listing and a Play
+# service account don't exist yet. Wire `fastlane supply` (or gradle-play-publisher)
+# into the "Upload" step when the prod app is created. Manual trigger only.
+on:
+  workflow_dispatch:
+
+jobs:
+  play:
+    name: Build prod AAB (upload stubbed)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Decode release keystore
+        env:
+          RELEASE_KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
+        run: |
+          echo "$RELEASE_KEYSTORE_BASE64" | base64 --decode > "$GITHUB_WORKSPACE/release.jks"
+          cat > "$GITHUB_WORKSPACE/keystore.properties" <<EOF
+          storeFile=$GITHUB_WORKSPACE/release.jks
+          storePassword=$STORE_PASSWORD
+          keyAlias=$KEY_ALIAS
+          keyPassword=$KEY_PASSWORD
+          EOF
+
+      - name: Build prod AAB
+        run: ./gradlew :androidApp:bundleProdRelease -PversionCode=${{ github.run_number }}
+
+      - name: Upload AAB artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: prod-release-aab
+          path: androidApp/build/outputs/bundle/prodRelease/*.aab
+
+      - name: TODO — Play upload
+        run: |
+          echo "::warning::Google Play upload not configured."
+          echo "Create the prod Play listing + a Play service account, then wire"
+          echo "fastlane supply (upload_to_play_store) or gradle-play-publisher here."
+
+      - name: Clean up secrets
+        if: always()
+        run: rm -f "$GITHUB_WORKSPACE/release.jks" "$GITHUB_WORKSPACE/keystore.properties"

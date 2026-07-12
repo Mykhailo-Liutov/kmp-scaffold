@@ -1,0 +1,129 @@
+name: AcmeApp
+options:
+  bundleIdPrefix: com.acmecorp.acmeapp
+  deploymentTarget:
+    iOS: "15.0"
+  createIntermediateGroups: true
+
+configs:
+  Debug-prod: debug
+  Release-prod: release
+  Debug-stage: debug
+  Release-stage: release
+
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+
+# kmp-scaffold:firebase:begin
+packages:
+  Firebase:
+    url: https://github.com/firebase/firebase-ios-sdk
+    from: "11.0.0"
+# kmp-scaffold:firebase:end
+
+targets:
+  AcmeApp:
+    type: application
+    platform: iOS
+    sources:
+      - path: iosApp
+        excludes:
+          - "Info.plist"
+    # kmp-scaffold:firebase:begin
+    dependencies:
+      - package: Firebase
+        product: FirebaseAnalytics
+      - package: Firebase
+        product: FirebaseCrashlytics
+      - package: Firebase
+        product: FirebaseMessaging
+    # kmp-scaffold:firebase:end
+    settings:
+      base:
+        INFOPLIST_FILE: iosApp/Info.plist
+        # The Shared framework is produced by :shared and copied here by the gradle task below.
+        FRAMEWORK_SEARCH_PATHS:
+          - $(inherited)
+          - $(SRCROOT)/../shared/build/xcode-frameworks/$(CONFIGURATION)/$(SDK_NAME)
+        OTHER_LDFLAGS:
+          - $(inherited)
+          - -framework
+          - Shared
+      configs:
+        # KOTLIN_FRAMEWORK_BUILD_TYPE: the custom config names aren't auto-mapped
+        # to debug/release by the Kotlin framework task, so set it explicitly.
+        # APP_BASE_URL / APP_ENVIRONMENT are written into Info.plist and read by
+        # the shared code via NSBundle (see MainViewController.kt).
+        Debug-prod:
+          PRODUCT_BUNDLE_IDENTIFIER: com.acmecorp.acmeapp
+          APP_DISPLAY_NAME: Acme App
+          APP_ENVIRONMENT: prod
+          APP_BASE_URL: "https://dummyjson.com/"
+          KOTLIN_FRAMEWORK_BUILD_TYPE: debug
+        Release-prod:
+          PRODUCT_BUNDLE_IDENTIFIER: com.acmecorp.acmeapp
+          APP_DISPLAY_NAME: Acme App
+          APP_ENVIRONMENT: prod
+          APP_BASE_URL: "https://dummyjson.com/"
+          KOTLIN_FRAMEWORK_BUILD_TYPE: release
+        Debug-stage:
+          PRODUCT_BUNDLE_IDENTIFIER: com.acmecorp.acmeapp.stage
+          APP_DISPLAY_NAME: Acme App Stage
+          APP_ENVIRONMENT: stage
+          APP_BASE_URL: "https://dummyjson.com/"
+          KOTLIN_FRAMEWORK_BUILD_TYPE: debug
+        Release-stage:
+          PRODUCT_BUNDLE_IDENTIFIER: com.acmecorp.acmeapp.stage
+          APP_DISPLAY_NAME: Acme App Stage
+          APP_ENVIRONMENT: stage
+          APP_BASE_URL: "https://dummyjson.com/"
+          KOTLIN_FRAMEWORK_BUILD_TYPE: release
+    preBuildScripts:
+      - name: "Compile & embed Shared framework"
+        basedOnDependencyAnalysis: false
+        script: |
+          cd "$SRCROOT/.."
+          ./gradlew :shared:embedAndSignAppleFrameworkForXcode
+    # kmp-scaffold:firebase:begin
+    postBuildScripts:
+      - name: "Select GoogleService-Info.plist for flavor"
+        basedOnDependencyAnalysis: false
+        script: |
+          case "${CONFIGURATION}" in
+            *stage) ENV=stage ;;
+            *) ENV=prod ;;
+          esac
+          cp "${SRCROOT}/config/${ENV}/GoogleService-Info.plist" \
+            "${BUILT_PRODUCTS_DIR}/${PRODUCT_NAME}.app/GoogleService-Info.plist"
+    # kmp-scaffold:firebase:end
+
+schemes:
+  AcmeApp-prod:
+    build:
+      targets:
+        AcmeApp: all
+    run:
+      config: Debug-prod
+    test:
+      config: Debug-prod
+    profile:
+      config: Release-prod
+    analyze:
+      config: Debug-prod
+    archive:
+      config: Release-prod
+  AcmeApp-stage:
+    build:
+      targets:
+        AcmeApp: all
+    run:
+      config: Debug-stage
+    test:
+      config: Debug-stage
+    profile:
+      config: Release-stage
+    analyze:
+      config: Debug-stage
+    archive:
+      config: Release-stage

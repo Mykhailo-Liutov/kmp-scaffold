@@ -1,0 +1,76 @@
+name: Distribute Stage (Android)
+
+# Stage builds go to Firebase App Distribution on every merge to main.
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      groups:
+        description: "Firebase tester groups (comma-separated aliases)"
+        required: true
+        default: "external"
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  distribute:
+    name: Build & distribute stageRelease
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Decode release keystore
+        env:
+          RELEASE_KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
+        run: |
+          echo "$RELEASE_KEYSTORE_BASE64" | base64 --decode > "$GITHUB_WORKSPACE/release.jks"
+          cat > "$GITHUB_WORKSPACE/keystore.properties" <<EOF
+          storeFile=$GITHUB_WORKSPACE/release.jks
+          storePassword=$STORE_PASSWORD
+          keyAlias=$KEY_ALIAS
+          keyPassword=$KEY_PASSWORD
+          EOF
+
+      # The FAD Gradle plugin reads a service-account key via GOOGLE_APPLICATION_CREDENTIALS.
+      - name: Write service account
+        env:
+          FIREBASE_SERVICE_ACCOUNT_STAGE: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_STAGE }}
+        run: printf '%s' "$FIREBASE_SERVICE_ACCOUNT_STAGE" > "$GITHUB_WORKSPACE/sa.json"
+
+      - name: Generate release notes
+        run: |
+          echo "$(git log -1 --pretty='%s (%h)') — build ${{ github.run_number }}" \
+            > "$GITHUB_WORKSPACE/release-notes.txt"
+
+      # Auto merges (push) → internal only. Manual runs choose the group(s) (default external).
+      - name: Build & upload to Firebase App Distribution
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ github.workspace }}/sa.json
+          FAD_GROUPS: ${{ github.event.inputs.groups || 'internal' }}
+        run: |
+          ./gradlew :androidApp:assembleStageRelease :androidApp:appDistributionUploadStageRelease \
+            -PversionCode=${{ github.run_number }} \
+            -PfadGroups="$FAD_GROUPS" \
+            -PfadReleaseNotes="$GITHUB_WORKSPACE/release-notes.txt"
+
+      - name: Clean up secrets
+        if: always()
+        run: rm -f "$GITHUB_WORKSPACE/release.jks" "$GITHUB_WORKSPACE/keystore.properties" "$GITHUB_WORKSPACE/sa.json"

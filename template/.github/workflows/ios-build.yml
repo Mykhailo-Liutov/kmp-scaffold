@@ -1,0 +1,52 @@
+name: iOS Build
+
+on:
+  pull_request:
+    branches: [ main ]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ios-build:
+    name: Build iOS (simulator)
+    runs-on: macstadium
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      # Needed even for the iOS build: the shared module configures its Android target during project sync.
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      # The .xcodeproj is gitignored; xcodegen regenerates it from iosApp/project.yml.
+      - name: Generate Xcode project
+        run: |
+          brew install xcodegen
+          xcodegen generate
+        working-directory: iosApp
+
+      # Builds for the simulator (no device/signing). The scheme's pre-build script invokes
+      # ./gradlew :shared:embedAndSignAppleFrameworkForXcode, which needs the JDK above.
+      # ARCHS=arm64 pins a concrete arch; a generic simulator destination leaves it unset and
+      # syncComposeResourcesForIos then fails to resolve its target ("no value available").
+      - name: Build for iOS simulator
+        working-directory: iosApp
+        run: |
+          set -o pipefail
+          xcodebuild build \
+            -project AcmeApp.xcodeproj \
+            -scheme AcmeApp-prod \
+            -configuration Debug-prod \
+            -sdk iphonesimulator \
+            ARCHS=arm64 \
+            CODE_SIGNING_ALLOWED=NO

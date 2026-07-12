@@ -1,0 +1,14 @@
+# Extends gitleaks' default rules. Allowlists committed files that look secret-ish
+# but aren't: Firebase client config (the API key in google-services.json /
+# GoogleService-Info.plist is a public client identifier, not a secret) and the
+# shared debug keystore (standard android/androiddebugkey, public by design).
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Non-secret committed config"
+paths = [
+  '''.*google-services\.json$''',
+  '''.*GoogleService-Info\.plist$''',
+  '''(^|/)debug\.keystore$''',
+]
