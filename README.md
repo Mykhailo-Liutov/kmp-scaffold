@@ -14,12 +14,19 @@ app-specific); the domain/data **capability split** is generated on demand.
 
 ## Install
 
+From GitHub:
+
+```
+/plugin marketplace add Mykhailo-Liutov/kmp-cmp-scaffold
+/plugin install kmp-cmp-scaffold
+```
+
+Or from a local clone:
+
 ```
 /plugin marketplace add /path/to/kmp-cmp-scaffold
 /plugin install kmp-cmp-scaffold
 ```
-
-(or add the marketplace from its git URL once published).
 
 ## Use
 
@@ -94,3 +101,7 @@ checklist live in `docs/DEVELOPMENT.md`.
 
 JDK 17 (auto-provisioned by the Gradle foojay resolver), an Android SDK (`ANDROID_HOME` or
 `local.properties`), Python 3, and — for iOS — macOS + Xcode + `xcodegen`.
+
+## License
+
+[Apache 2.0](LICENSE)
