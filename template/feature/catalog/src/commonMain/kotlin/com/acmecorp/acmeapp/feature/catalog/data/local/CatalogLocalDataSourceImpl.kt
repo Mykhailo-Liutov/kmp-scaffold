@@ -14,6 +14,6 @@ class CatalogLocalDataSourceImpl(
         dao.observeAll().map { entities -> entities.map { it.toDomain() } }
 
     override suspend fun replaceAll(products: List<Product>) {
-        dao.upsertAll(products.map { it.toEntity() })
+        dao.replaceAll(products.map { it.toEntity() })
     }
 }

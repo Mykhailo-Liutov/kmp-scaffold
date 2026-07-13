@@ -166,5 +166,10 @@ Re-run #1 as the regression gate after any generator change (commands in `CLAUDE
   mechanical once the tab-vs-flow decision is made — script them, leave only semantics to the agent.
 - **Generator test matrix in CI**: identities incl. collisions/keywords/unicode, Firebase on/off,
   android-only, all feature ops, malformed sentinels, golden-token leak scan.
+- **Template hardening from generated-app reviews** (TripLog/RecipeBox, 2026-07): feature-level
+  typed errors instead of one generic `<X>Error` string; a failure strategy for the observe/`Flow`
+  read path (refresh path is typed, reads aren't); single-flight `refresh()` in the ViewModel;
+  iOS Room db under Application Support via `NSFileManager` (not `NSHomeDirectory()`); a real
+  detail destination behind the list `onItemClick` (currently a stubbed no-op affordance).
 - **Prefix collision check**: `derive_identity` could collide two-word names to the same prefix;
   consider validating/uniquifying.

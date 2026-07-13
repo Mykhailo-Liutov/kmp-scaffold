@@ -2,6 +2,7 @@ package com.acmecorp.acmeapp.feature.catalog.data.local.dao
 
 import androidx.room.Dao
 import androidx.room.Query
+import androidx.room.Transaction
 import androidx.room.Upsert
 import com.acmecorp.acmeapp.feature.catalog.data.local.entity.ProductEntity
 import kotlinx.coroutines.flow.Flow
@@ -16,4 +17,11 @@ interface ProductDao {
 
     @Query("DELETE FROM products")
     suspend fun clear()
+
+    // Atomic: rows absent from the fresh remote result must not survive a refresh.
+    @Transaction
+    suspend fun replaceAll(items: List<ProductEntity>) {
+        clear()
+        upsertAll(items)
+    }
 }
