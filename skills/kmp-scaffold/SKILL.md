@@ -86,6 +86,13 @@ Keep the conventions: Koin modules in `di` packages, route keys `internal`, plai
 StateFlow`, fallible data ops return `Either<AppError, …>` via `catching`. When in doubt, mirror the
 `catalog`/`home` modules.
 
+**After renaming or removing `catalog`, sweep the leftovers**: the old `core/navigation/CatalogNav.kt`
+facade, the `feature/catalog/schemas/` dir (rename its database-qualified subdir too), and the
+"clone the `catalog` archetype" wording in the generated `CLAUDE.md` (point it at the new primary
+feature instead). Keep the Ktor remote seam intact when tailoring — if there is no real API yet,
+keep the DTO + mapper + `HttpClient` structure and back it with sample data behind the same
+interface, so the reference architecture survives.
+
 ## 5. Verify
 
 ```bash
@@ -98,6 +105,9 @@ dangling cross-feature callback), and re-run. iOS verification is macOS-only —
 xcodebuild hint from the script output; don't attempt it on Linux.
 
 ## 6. Finish
+
+**Commit the tailoring** (generation auto-committed the raw scaffold): `git add -A && git commit -m
+"Tailor scaffold to <domain>"` — the user should not land on a dirty tree.
 
 Tell the user, concisely:
 - where the project is and its base package;

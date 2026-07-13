@@ -140,6 +140,10 @@ def content_replacements(idn: Identity) -> list[tuple[str, str]]:
         (GOLDEN_BASE_PKG, idn.base_pkg),
         (GOLDEN_DISPLAY_STAGE, f"{idn.app_display} Stage"),
         (GOLDEN_DISPLAY, idn.app_display),
+        # Before PROJECT_NAME: the app class is prefix+"Application", but the
+        # PROJECT_NAME token is a prefix of it ("AcmeApp" inside "AcmeApplication")
+        # and would otherwise win the alternation and produce "<Name>lication".
+        (GOLDEN_PREFIX_PASCAL + "Application", idn.prefix_pascal + "Application"),
         (GOLDEN_PROJECT_NAME, idn.project_name),
         (GOLDEN_PREFIX_PASCAL, idn.prefix_pascal),
         (GOLDEN_PREFIX_LOWER + ".", idn.prefix_lower + "."),

@@ -117,6 +117,9 @@ TMP2=$(mktemp -d)/FitTrack
 python3 scripts/generate.py --target "$TMP2" --group com.acme --name FitTrack --no-git
 grep -rn "com.ft.fittrack" "$TMP2" && echo "CASCADE BUG" || echo "ok: no cascade"
 test -d "$TMP2/shared/src/commonMain/kotlin/com/acme/fittrack" && echo "ok: dirs match"
+# the app class must become <Prefix>Application, never "<Name>lication"
+test -f "$TMP2/androidApp/src/main/kotlin/com/acme/fittrack/android/FtApplication.kt" && echo "ok: FtApplication"
+grep -rEn "class \w*lication" "$TMP2" --include='*.kt' | grep -v "Application" && echo "LICATION BUG" || echo "ok: no lication"
 
 # feature clone + (manual/agent) wire, then rebuild
 python3 scripts/feature_ops.py clone --target "$TMP" --archetype catalog --feature events --noun Event

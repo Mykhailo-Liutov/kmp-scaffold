@@ -43,7 +43,11 @@ Read the blueprint at `${CLAUDE_PLUGIN_ROOT}/skills/kmp-blueprint/SKILL.md`, the
    use cases, UI state, ViewModel, and screen so the fields match the real domain. Keep fallible
    repository ops returning `Either<AppError, …>` via `catching` (subclass `AppError` as `<X>Error`);
    ViewModels `.fold` the result into their UiState. Keep route keys `internal`, Koin modules in `di`
-   packages, ViewModels plain `ViewModel + StateFlow`.
+   packages, ViewModels plain `ViewModel + StateFlow`. **Do not strip the Ktor remote seam**: if no
+   real API exists yet, keep the DTO + mapper + `HttpClient` data-source structure and serve sample
+   data behind the same interface (the feature is the project's reference architecture). Prefer real
+   types over encoded strings in entities (e.g. a Room type converter or a related table instead of
+   joining a list into one delimited column).
 
 ### Adding a capability (domain/data split)
 
