@@ -87,24 +87,59 @@ def _derive_prefix(project_name: str, slug: str) -> str:
 
 _SEGMENT = re.compile(r"^[a-z][a-z0-9]*$")
 
+# Package segments must be valid in Kotlin AND Java (Android tooling compiles the
+# applicationId / namespace as a Java identifier chain).
+RESERVED_WORDS = frozenset(
+    """
+    abstract as assert boolean break byte case catch char class const continue default do
+    double else enum extends false final finally float for fun goto if implements import
+    in instanceof int interface is long native new null object package private protected
+    public return short static strictfp super switch synchronized this throw throws
+    transient true try typealias typeof val var void volatile when while
+    """.split()
+)
 
-def _validate(group: str, project_name: str, slug: str, prefix_lower: str, base_url: str) -> None:
-    """Reject identities that would generate invalid Kotlin/Gradle/package syntax."""
+# app_display lands verbatim in strings.xml (XML), project.yml (unquoted YAML scalar) and
+# Kotlin string literals, so the charset is restricted instead of context-escaped.
+_DISPLAY = re.compile(r"^[\w][\w .,+()!?-]*$")
+
+# base_url lands in Kotlin strings ($ interpolates, \ escapes) and a double-quoted YAML scalar.
+_URL_UNSAFE = re.compile(r"[\s\"'\\$<>`]")
+
+
+def _validate(group: str, project_name: str, slug: str, prefix_lower: str, base_url: str, app_display: str) -> None:
+    """Reject identities that would generate invalid Kotlin/Gradle/XML/YAML syntax."""
     segments = group.split(".")
     if len(segments) < 2 or not all(_SEGMENT.match(s) for s in segments):
         raise ValueError(
             f"invalid group {group!r}: need >=2 dot-separated segments of [a-z][a-z0-9]* (e.g. com.acme)"
         )
+    for s in segments:
+        if s in RESERVED_WORDS:
+            raise ValueError(f"invalid group {group!r}: segment {s!r} is a Kotlin/Java reserved word")
     if not re.match(r"^[A-Za-z][A-Za-z0-9]*$", project_name):
         raise ValueError(
             f"invalid app name: derived class name {project_name!r} is not a valid Kotlin identifier"
         )
     if not _SEGMENT.match(slug):
         raise ValueError(f"invalid slug {slug!r}: need [a-z][a-z0-9]*")
+    if slug in RESERVED_WORDS:
+        raise ValueError(f"invalid slug {slug!r}: Kotlin/Java reserved word (pass an explicit slug)")
     if not _SEGMENT.match(prefix_lower):
         raise ValueError(f"invalid prefix {prefix_lower!r}: need [a-z][a-z0-9]*")
     if not base_url.startswith(("http://", "https://")):
         raise ValueError(f"invalid base_url {base_url!r}: must start with http(s)://")
+    if _URL_UNSAFE.search(base_url):
+        raise ValueError(
+            f"invalid base_url {base_url!r}: whitespace and \" ' \\ $ < > ` are not allowed "
+            "(they break the generated Kotlin/YAML)"
+        )
+    if not _DISPLAY.match(app_display):
+        raise ValueError(
+            f"invalid display name {app_display!r}: allowed are letters/digits, space and . , + ( ) ! ? - "
+            "(quotes, &, apostrophes etc. break the generated strings.xml / project.yml; "
+            "pass a simpler --app-display)"
+        )
 
 
 def derive_identity(
@@ -120,14 +155,15 @@ def derive_identity(
     slug = (slug or _slug(app_name)).lower()
     prefix_lower = (prefix or _derive_prefix(project_name, slug)).lower()
     prefix_pascal = prefix_lower[:1].upper() + prefix_lower[1:]
-    _validate(group, project_name, slug, prefix_lower, base_url)
+    display = (app_display or app_name).strip()
+    _validate(group, project_name, slug, prefix_lower, base_url, display)
     return Identity(
         group=group,
         project_name=project_name,
         slug=slug,
         prefix_lower=prefix_lower,
         prefix_pascal=prefix_pascal,
-        app_display=(app_display or app_name).strip(),
+        app_display=display,
         base_url=base_url,
     )
 

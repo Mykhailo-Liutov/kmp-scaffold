@@ -54,7 +54,7 @@ di
 ## Build & run
 
 ```bash
-./gradlew :androidApp:assembleDebug          # Android
+./gradlew :androidApp:assembleProdDebug      # Android (flavors: prod / stage)
 ./gradlew :shared:linkDebugFrameworkIosSimulatorArm64   # iOS shared framework
 ./gradlew check                              # unit tests (JVM host)
 ```
@@ -74,7 +74,7 @@ The Xcode project is generated from `iosApp/project.yml` via [xcodegen](https://
 ```bash
 brew install xcodegen          # once
 cd iosApp && xcodegen generate # creates AcmeApp.xcodeproj
-open iosApp/AcmeApp.xcodeproj
+open AcmeApp.xcodeproj
 ```
 
 `project.yml` already wires a pre-build script (`:shared:embedAndSignAppleFrameworkForXcode`)
@@ -82,7 +82,7 @@ and the framework search paths, so the `Shared` framework builds and links autom
 Headless build check:
 
 ```bash
-xcodebuild -project iosApp/AcmeApp.xcodeproj -scheme AcmeApp \
+xcodebuild -project iosApp/AcmeApp.xcodeproj -scheme AcmeApp-prod \
   -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
   ARCHS=arm64 ONLY_ACTIVE_ARCH=YES CODE_SIGNING_ALLOWED=NO build
 ```

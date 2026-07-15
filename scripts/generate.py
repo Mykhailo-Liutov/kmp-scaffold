@@ -312,8 +312,8 @@ def main() -> int:
     android_only = bool(cfg.get("android_only", False))
 
     target = Path(args.target).resolve()
-    # A lone .git (user ran `git init` first) is fine; anything else is not.
-    if target.exists() and any(p.name != ".git" for p in target.iterdir()):
+    # A lone .git (user ran `git init` first) or Finder's .DS_Store is fine; anything else is not.
+    if target.exists() and any(p.name not in (".git", ".DS_Store") for p in target.iterdir()):
         print(f"error: target is not empty: {target}", file=sys.stderr)
         return 2
     target.mkdir(parents=True, exist_ok=True)
@@ -332,7 +332,11 @@ def main() -> int:
     features = cfg.get("features")
     if features not in (None, "default"):
         import feature_ops
-        feature_ops.realize(target, idn, features)
+        try:
+            feature_ops.realize(target, idn, features)
+        except (ValueError, KeyError, FileNotFoundError, FileExistsError) as e:
+            print(f"error: feature manifest failed: {e}", file=sys.stderr)
+            return 2
 
     make_executable(target / "gradlew")
     write_blueprint(target, idn)

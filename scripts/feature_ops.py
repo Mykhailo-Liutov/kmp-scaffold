@@ -5,8 +5,9 @@ These are the deterministic, token-level transforms. The *semantic* wiring (addi
 tab vs a top-level flow, cross-feature callbacks) is bespoke per app and is handled by
 the kmp-feature-author agent following docs/ARCHITECTURE.md — not here.
 
-clone_feature  copy an archetype module (catalog=full clean-arch, home=minimal) into a
-               new feature, renaming every identifier (module segment, class prefix,
+clone_feature  copy an archetype module (catalog=full clean-arch, home=minimal) from the
+               plugin's pristine template into a new feature, re-tokenizing the golden
+               identity and renaming every identifier (module segment, class prefix,
                domain noun) across paths and contents.
 remove_feature delete a feature module and strip its *simple* aggregation references.
 
@@ -19,11 +20,22 @@ import argparse
 import re
 import shutil
 import sys
+import tempfile
 from pathlib import Path
 
-from lib_tokens import GOLDEN_PKG_PATH, apply_replacements, content_replacements, derive_identity
+from lib_tokens import (
+    GOLDEN_PKG_PATH,
+    RESERVED_WORDS,
+    apply_replacements,
+    content_replacements,
+    derive_identity,
+)
 
 BINARY_EXTS = {".jar", ".keystore", ".png", ".jpg", ".jpeg", ".webp", ".ico", ".bin"}
+
+# Never copy generated/OS junk out of an archetype (a built archetype would otherwise
+# leak Gradle outputs — and their binary files crash the text transform).
+EXCLUDED_DIRS = {"build", ".gradle", ".idea", ".kotlin"}
 
 # Identifiers each archetype renames. Order matters: PascalCase before lowercase (the
 # lowercase token is a substring of the PascalCase one).
@@ -37,6 +49,11 @@ ARCHETYPES = {
 # identity; add_capability() re-tokenizes them to the target project's identity.
 CAPABILITY_SRC = Path(__file__).resolve().parent.parent / "archetypes" / "capability"
 CAPABILITY_ARCHETYPE = {"class": "Sample", "module": "sample", "noun": "Item", "noun_lower": "item"}
+
+# Feature archetypes are cloned from the plugin's pristine template (golden identity),
+# never from the target project — user edits / build outputs there must not leak into
+# a clone, and the archetype must survive the user renaming their own feature/catalog.
+TEMPLATE_FEATURE_DIR = Path(__file__).resolve().parent.parent / "template" / "feature"
 
 
 def _pascal(name: str) -> str:
@@ -54,6 +71,45 @@ def _is_binary(p: Path) -> bool:
     return p.suffix.lower() in BINARY_EXTS
 
 
+def _check_identifier(kind: str, name: str) -> None:
+    """Reject names whose derived module/class forms wouldn't be valid Kotlin/Gradle
+    identifiers (empty, leading digit, reserved word) BEFORE any file is created."""
+    module = re.sub(r"[^a-z0-9]+", "", name.lower())
+    if not re.match(r"^[a-z][a-z0-9]*$", module):
+        raise ValueError(
+            f"invalid {kind} name {name!r}: module/package segment {module!r} must start with a "
+            "letter and contain only [a-z0-9]"
+        )
+    if module in RESERVED_WORDS:
+        raise ValueError(f"invalid {kind} name {name!r}: {module!r} is a Kotlin/Java reserved word")
+    cls = _pascal(name)
+    if not re.match(r"^[A-Z][A-Za-z0-9]*$", cls):
+        raise ValueError(f"invalid {kind} name {name!r}: class prefix {cls!r} is not a valid Kotlin identifier")
+
+
+def _stage_tree(src: Path, staging: Path, path_pairs: list[tuple[str, str]],
+                content_pairs: list[tuple[str, str]]) -> list[str]:
+    """Copy src into staging, transforming paths + contents. Callers rename the staged
+    result into place only after the whole tree succeeded, so a mid-copy failure never
+    leaves a partial module in the project."""
+    rels: list[str] = []
+    for path in sorted(src.rglob("*")):
+        if path.is_dir():
+            continue
+        rel = path.relative_to(src)
+        if EXCLUDED_DIRS.intersection(rel.parts[:-1]) or rel.name == ".DS_Store":
+            continue
+        new_rel = apply_replacements(rel.as_posix(), path_pairs)
+        dest = staging / new_rel
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        if _is_binary(path):
+            shutil.copy2(path, dest)
+        else:
+            dest.write_text(apply_replacements(path.read_text(encoding="utf-8"), content_pairs), encoding="utf-8")
+        rels.append(new_rel)
+    return rels
+
+
 def _renames(archetype: str, new_feature: str, new_noun: str | None) -> list[tuple[str, str]]:
     a = ARCHETYPES[archetype]
     new_class = _pascal(new_feature)
@@ -68,38 +124,36 @@ def _renames(archetype: str, new_feature: str, new_noun: str | None) -> list[tup
     return pairs
 
 
-def _apply(text: str, pairs: list[tuple[str, str]]) -> str:
-    # Single pass (see lib_tokens.apply_replacements): replacement output is never
-    # itself rewritten, so a new noun containing an archetype token can't cascade.
-    return apply_replacements(text, pairs)
-
-
-def clone_feature(target: Path, archetype: str, new_feature: str, new_noun: str | None = None) -> list[str]:
+def clone_feature(target: Path, archetype: str, new_feature: str, new_noun: str | None = None,
+                  idn=None) -> list[str]:
     if archetype not in ARCHETYPES:
         raise ValueError(f"unknown archetype: {archetype} (choose from {sorted(ARCHETYPES)})")
-    src = target / "feature" / archetype
+    src = TEMPLATE_FEATURE_DIR / archetype
     if not src.is_dir():
-        raise FileNotFoundError(f"archetype module not found: {src}")
+        raise FileNotFoundError(f"archetype module not found in plugin template: {src}")
+    _check_identifier("feature", new_feature)
+    if new_noun:
+        _check_identifier("noun", new_noun)
     new_module = _module(new_feature)
     dest_root = target / "feature" / new_module
     if dest_root.exists():
         raise FileExistsError(f"feature already exists: {dest_root}")
 
-    pairs = _renames(archetype, new_feature, new_noun)
-    created: list[str] = []
-    for path in sorted(src.rglob("*")):
-        if path.is_dir():
-            continue
-        rel = path.relative_to(src).as_posix()
-        new_rel = _apply(rel, pairs)
-        dest = dest_root / new_rel
-        dest.parent.mkdir(parents=True, exist_ok=True)
-        if _is_binary(path):
-            shutil.copy2(path, dest)
-        else:
-            dest.write_text(_apply(path.read_text(encoding="utf-8"), pairs), encoding="utf-8")
-        created.append(str(dest.relative_to(target)))
-    return created
+    idn = idn or _infer_identity(target)
+    # One combined pass: the archetype is in golden identity, so identity replacement
+    # output must never be re-tokenized by the archetype rename pairs (and vice versa).
+    content_pairs = content_replacements(idn) + _renames(archetype, new_feature, new_noun)
+    path_pairs = [(GOLDEN_PKG_PATH, idn.base_pkg_path)] + content_pairs
+
+    dest_root.parent.mkdir(parents=True, exist_ok=True)
+    staging = Path(tempfile.mkdtemp(prefix=f".{new_module}-", dir=dest_root.parent))
+    try:
+        rels = _stage_tree(src, staging, path_pairs, content_pairs)
+        staging.rename(dest_root)
+    except BaseException:
+        shutil.rmtree(staging, ignore_errors=True)
+        raise
+    return [f"feature/{new_module}/{rel}" for rel in rels]
 
 
 def _strip_lines(path: Path, predicate) -> bool:
@@ -169,14 +223,28 @@ def _infer_prefix(target: Path) -> str:
 
 
 def _infer_identity(target: Path):
-    """Reconstruct the generated project's identity (base package + plugin prefix) by reading
-    it back out of the project, so a plugin archetype can be re-tokenized into it."""
+    """Reconstruct the generated project's identity (base package, plugin prefix, project
+    name, display name) by reading it back out of the project, so a plugin archetype can
+    be re-tokenized into it."""
     pkg_path = _find_pkg_root(target)
     if not pkg_path:
         raise FileNotFoundError("could not locate the base package (shared/.../Koin.kt) in target")
     parts = pkg_path.split("/")
     group, slug = ".".join(parts[:-1]), parts[-1]
-    return derive_identity(group=group, app_name=slug, slug=slug, prefix=_infer_prefix(target))
+    name = slug
+    settings = target / "settings.gradle.kts"
+    if settings.exists():
+        m = re.search(r'rootProject\.name\s*=\s*"([^"]+)"', settings.read_text(encoding="utf-8"))
+        if m:
+            name = m.group(1)
+    display = None
+    strings = target / "androidApp" / "src" / "prod" / "res" / "values" / "strings.xml"
+    if strings.exists():
+        m = re.search(r'<string name="app_name">([^<]+)</string>', strings.read_text(encoding="utf-8"))
+        if m:
+            display = m.group(1)
+    return derive_identity(group=group, app_name=name, slug=slug, prefix=_infer_prefix(target),
+                           app_display=display)
 
 
 def _capability_renames(capability: str, noun: str | None) -> list[tuple[str, str]]:
@@ -191,35 +259,46 @@ def _capability_renames(capability: str, noun: str | None) -> list[tuple[str, st
     return pairs
 
 
-def add_capability(target: Path, capability: str, new_noun: str | None = None) -> list[str]:
+def add_capability(target: Path, capability: str, new_noun: str | None = None, idn=None) -> list[str]:
     """Scaffold a domain:<x> + data:<x> capability split from the plugin archetype, tokenized
     to the target's identity. Aggregation wiring is left to the caller (see checklist)."""
     if not CAPABILITY_SRC.is_dir():
         raise FileNotFoundError(f"capability archetype missing: {CAPABILITY_SRC}")
+    _check_identifier("capability", capability)
+    if new_noun:
+        _check_identifier("noun", new_noun)
     module = _module(capability)
     for layer in ("domain", "data"):
         dest = target / layer / module
         if dest.exists():
             raise FileExistsError(f"capability module already exists: {dest}")
 
-    idn = _infer_identity(target)
+    idn = idn or _infer_identity(target)
     # One combined pass: identity replacement output must not be re-tokenized by the
     # archetype name pairs (e.g. an app literally named "Sample").
     content_pairs = content_replacements(idn) + _capability_renames(capability, new_noun)
     path_pairs = [(GOLDEN_PKG_PATH, idn.base_pkg_path)] + content_pairs
-    created: list[str] = []
-    for path in sorted(CAPABILITY_SRC.rglob("*")):
-        if path.is_dir():
-            continue
-        rel = apply_replacements(path.relative_to(CAPABILITY_SRC).as_posix(), path_pairs)
-        dest = target / rel
-        dest.parent.mkdir(parents=True, exist_ok=True)
-        if _is_binary(path):
-            shutil.copy2(path, dest)
-        else:
-            text = apply_replacements(path.read_text(encoding="utf-8"), content_pairs)
-            dest.write_text(text, encoding="utf-8")
-        created.append(str(dest.relative_to(target)))
+
+    # Stage the whole archetype, then move both module dirs into place only once the
+    # full transform succeeded; roll the first move back if the second fails.
+    staging = Path(tempfile.mkdtemp(prefix=f".{module}-", dir=target))
+    moved: list[Path] = []
+    try:
+        created = _stage_tree(CAPABILITY_SRC, staging, path_pairs, content_pairs)
+        for layer in ("domain", "data"):
+            src_mod = staging / layer / module
+            if not src_mod.is_dir():
+                raise FileNotFoundError(f"capability archetype produced no {layer}/{module} module")
+            dest = target / layer / module
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            src_mod.rename(dest)
+            moved.append(dest)
+    except BaseException:
+        for d in moved:
+            shutil.rmtree(d, ignore_errors=True)
+        raise
+    finally:
+        shutil.rmtree(staging, ignore_errors=True)
     return created
 
 
@@ -257,11 +336,13 @@ def realize(target: Path, identity, features) -> None:
     for op in features or []:
         kind = op.get("op")
         if kind == "clone":
-            clone_feature(target, op["archetype"], op["feature"], op.get("noun"))
+            clone_feature(target, op["archetype"], op["feature"], op.get("noun"), idn=identity)
         elif kind == "remove":
             remove_feature(target, op["feature"])
         elif kind == "capability":
-            add_capability(target, op["capability"], op.get("noun"))
+            add_capability(target, op["capability"], op.get("noun"), idn=identity)
+        else:
+            raise ValueError(f"unknown feature op {kind!r} in manifest (expected clone / remove / capability)")
 
 
 def main() -> int:
@@ -285,6 +366,14 @@ def main() -> int:
     args = ap.parse_args()
 
     target = Path(args.target).resolve()
+    try:
+        return _dispatch(args, target)
+    except (ValueError, FileNotFoundError, FileExistsError) as e:
+        print(f"error: {e}", file=sys.stderr)
+        return 2
+
+
+def _dispatch(args: argparse.Namespace, target: Path) -> int:
     if args.cmd == "clone":
         created = clone_feature(target, args.archetype, args.feature, args.noun)
         print(f"cloned {args.archetype} -> feature/{_module(args.feature)} ({len(created)} files)")

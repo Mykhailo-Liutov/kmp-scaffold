@@ -104,11 +104,18 @@ Full iOS-target removal (editing `KmpLibraryConventionPlugin`, `shared` framewor
 
 ## feature_ops.py
 
-`clone --archetype {catalog|home} --feature <name> [--noun <Noun>]`: copies `feature/<archetype>` →
-`feature/<name>`, renaming identifiers across paths + contents. Ordered renames (PascalCase before
-lowercase; uppercase const form too): `Catalog→<Class>`, `CATALOG→<UPPER>`, `catalog→<module>`, and
-for the full archetype `Product→<Noun>`, `product→<noun>`. Verified consistent: e.g.
-`EventsDatabase.eventDao()`, table `events`, `EventDao`/`EventEntity`/`EventDto` all align.
+`clone --archetype {catalog|home} --feature <name> [--noun <Noun>]`: copies the plugin's pristine
+`template/feature/<archetype>` → `feature/<name>` (never the target's own copy — user edits and
+Gradle `build/` outputs must not leak into a clone, and the archetype survives the user renaming
+their in-project `feature/catalog`). The archetype is in golden identity, so the copy applies
+`content_replacements(_infer_identity(target))` + the archetype renames in ONE combined pass.
+Ordered renames (PascalCase before lowercase; uppercase const form too): `Catalog→<Class>`,
+`CATALOG→<UPPER>`, `catalog→<module>`, and for the full archetype `Product→<Noun>`,
+`product→<noun>`. Verified consistent: e.g. `EventsDatabase.eventDao()`, table `events`,
+`EventDao`/`EventEntity`/`EventDto` all align. Clone + capability are **transactional**: files are
+staged into a temp dir inside the target and renamed into place only after the whole transform
+succeeded, so a failure never leaves a partial module that blocks retry. Feature/capability/noun
+names are validated up front (leading letter, `[a-z0-9]`, no Kotlin/Java reserved words).
 
 `remove --feature <name>`: deletes the module + strips the *simple* aggregation references (settings
 include, shared api, Koin import+entry, `NavigationRoutes` field, deletes the `<Class>Nav` facade) and
@@ -116,10 +123,11 @@ prints a checklist for the bespoke `MainRoute`/`RootNavHost` cleanup.
 
 `capability --capability <name> [--noun <Noun>]`: scaffolds a `domain:<name>` + `data:<name>` split
 from `archetypes/capability/` (shipped with the plugin, **not** in `template/`, so generated projects
-don't carry a sample capability). Unlike `clone` (which copies an in-project module already in the
-user's identity), the archetype uses the golden identity, so `add_capability` re-tokenizes it: it
-reads the target's identity back out of the project (`_infer_identity` — base package from
-`shared/.../Koin.kt`, plugin prefix from any `id("…​.kmp.library")`), applies
+don't carry a sample capability). Like `clone`, the archetype uses the golden identity, so
+`add_capability` re-tokenizes it: it reads the target's identity back out of the project
+(`_infer_identity` — base package from `shared/.../Koin.kt`, plugin prefix from any
+`id("…​.kmp.library")`, project name from `rootProject.name`, display name from the prod
+`strings.xml`), applies
 `lib_tokens.content_replacements`, then the `Sample→<Class>` / `Item→<Noun>` renames. The archetype's
 `InMemory…Repository` is a Firebase-free stub returning `Either<AppError, Unit>`. `remove-capability`
 strips both modules + settings includes + shared dep + Koin entries.
@@ -138,6 +146,14 @@ Real Gradle 9.4.1 builds on macOS, Android SDK present:
 3. `./gradlew staticAnalysis` (detekt + ktlint across all modules) → `BUILD SUCCESSFUL`.
 4. Firebase **on** generate → crash-reporter files kept, Firebase regions retained, no leftover
    sentinel markers; Firebase **off** → those whole files dropped.
+5. Codex-review batch (2026-07-15): replica build + host tests green after the feature-ops rewrite;
+   `clone` into an already-**built** project succeeds (was: `UnicodeDecodeError` + partial module);
+   new-clone output diffed byte-identical to old-clone output for `catalog`/`home`/`capability` on a
+   fresh project; cloned `:feature:events` compiles + its host tests pass when wired in; invalid
+   identifiers (`123`, `class`, `New`, `###`), unsafe display names (`A&B "Quoted"`), reserved-word
+   groups (`com.new`)/slugs (`interface`) and quoted base URLs all rejected before any file op;
+   unknown manifest ops fail generation; `.DS_Store`-only target accepted; `extract-template.py`
+   refuses containment in both directions; `claude plugin validate --strict` passes.
 
 Re-run #1 as the regression gate after any generator change (commands in `CLAUDE.md`).
 
@@ -156,12 +172,20 @@ Re-run #1 as the regression gate after any generator change (commands in `CLAUDE
   these stubbed).
 - **`generate.py` feature manifest**: `realize()` exists but the skill currently prefers
   clone-then-agent-wire; flesh out manifest-driven generation if a fully headless path is wanted.
-- **Transactional generation**: generate into a staging dir, validate, then rename into place, so a
-  failed run never leaves a half-written target that blocks retry.
-- **Escaping-aware display values**: `app_display`/`base_url` are inserted verbatim into Kotlin, XML,
-  YAML and plist contexts; either restrict the charset harder or add context-aware escaping.
-- **Immutable feature archetypes**: `clone` currently copies `feature/catalog|home` from the *target*
-  project, so user edits mutate the archetype; ship plugin-side copies like the capability archetype.
+- **Transactional generation**: `generate.py` should copy into a staging dir, validate, then rename
+  into place, so a failed run never leaves a half-written target that blocks retry.
+  ~~Feature ops~~ DONE (2026-07-15): `clone`/`capability` stage into a temp dir inside the target and
+  rename atomically after the full transform succeeds; `generate.py` itself is still direct-write.
+- ~~**Escaping-aware display values**~~ DONE (2026-07-15): went with the stricter-charset option —
+  `app_display` restricted to letters/digits/space/`. , + ( ) ! ? -` (XML/YAML/Kotlin-safe),
+  `base_url` rejects whitespace and `" ' \ $ < > `` ` ``; package segments/slug also reject
+  Kotlin/Java reserved words. Context-aware escaping still an option if the charset proves too tight.
+- ~~**Immutable feature archetypes**~~ DONE (2026-07-15): `clone` now copies the plugin's pristine
+  `template/feature/<archetype>` (golden identity, re-tokenized via `_infer_identity`) instead of the
+  target's own module — fixes the post-build clone crash (Gradle `build/` binaries hit the text
+  transform) and survives the user renaming their in-project archetype. Output verified byte-identical
+  to the old in-project clone on a fresh project. Feature/capability/noun identifiers are validated
+  (leading letter, no reserved words) before any file op.
 - **Deterministic standard wiring**: settings include / shared dep / Koin entry / nav facade+field are
   mechanical once the tab-vs-flow decision is made — script them, leave only semantics to the agent.
 - **Generator test matrix in CI**: identities incl. collisions/keywords/unicode, Firebase on/off,

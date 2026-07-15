@@ -152,8 +152,11 @@ def main() -> int:
     if out.exists():
         # Refuse to recursively delete anything that doesn't look like a template
         # output dir — a mistyped --out must not nuke an arbitrary directory.
+        # Containment is rejected in BOTH directions: src inside out would be
+        # deleted with it; out inside src would delete part of the source tree.
         plugin_root = Path(__file__).resolve().parent.parent
-        if out in (Path("/"), Path.home()) or out == plugin_root or src in (out, *out.parents):
+        if (out in (Path("/"), Path.home()) or out == plugin_root
+                or src in (out, *out.parents) or out in src.parents):
             print(f"error: refusing to delete {out}", file=sys.stderr)
             return 2
         if not (out / "settings.gradle.kts").exists():
