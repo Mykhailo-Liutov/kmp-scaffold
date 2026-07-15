@@ -1,8 +1,11 @@
 # kmp-cmp-scaffold
 
 A Claude Code plugin that scaffolds a new **Kotlin Multiplatform + Compose Multiplatform** app
-(Android + iOS) from a production-grade golden template — tailored to your organization, app name,
-and domain. The generated project **compiles and runs out of the box with zero external accounts**.
+(Android + iOS) from a production-oriented golden template — tailored to your organization, app
+name, and domain. The generated project **compiles and runs out of the box with zero external
+accounts**. It is an **architecture starter**, not a finished production app: the architecture,
+tooling, and CI are the ones you'd ship with, but endpoints, signing, icons, and store assets
+remain yours to finish (the generator and docs call these out).
 
 It reproduces the golden architecture: `build-logic` convention plugins, a Gradle version catalog,
 a modular `:core:*` + `:feature:*` layout, Koin DI (modules in `di` packages), a cross-feature
@@ -53,7 +56,7 @@ variable parts.
 - `scripts/generate.py` — copies `template/` into the target, then: strips Firebase regions (unless
   enabled), applies ordered identity replacements to file **contents**, relocates package
   **directories** to the chosen base package, optionally realizes a feature manifest, and writes
-  `CLAUDE.md` / `docs/ARCHITECTURE.md` / seed memories. Produces an exact compiling replica for the
+  `CLAUDE.md` / `docs/ARCHITECTURE.md` / `.claude/rules/`. Produces an exact compiling replica for the
   default feature set.
 - `scripts/feature_ops.py` — mechanical module ops: `clone` an archetype (`catalog` = full
   clean-arch, `home` = minimal) into a new feature; `remove` a feature; `capability` scaffolds a
@@ -110,7 +113,7 @@ lanes as stubs to finish. Feature `remove` is not build-preserving (it prints a 
 ## Requirements
 
 JDK 17 (auto-provisioned by the Gradle foojay resolver), an Android SDK (`ANDROID_HOME` or
-`local.properties`), Python 3, and — for iOS — macOS + Xcode + `xcodegen`.
+`local.properties`), Python 3.10+, and — for iOS — macOS + Xcode + `xcodegen`.
 
 ## License
 

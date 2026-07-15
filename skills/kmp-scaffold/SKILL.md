@@ -50,7 +50,7 @@ python3 "${CLAUDE_PLUGIN_ROOT}/scripts/generate.py" --target "$PWD" \
 (or pass `--config config.json` with keys: `group, app_name, slug, prefix, app_display, base_url,
 firebase, android_only, git_init`). This produces a **compiling** Android+iOS project with the full
 `:core:*` set and the reference features, all re-namespaced to the user's identity, Firebase regions
-stripped unless enabled, plus `CLAUDE.md`, `docs/ARCHITECTURE.md`, and seed memories.
+stripped unless enabled, plus `CLAUDE.md`, `docs/ARCHITECTURE.md`, and `.claude/rules/`.
 
 ## 4. Tailor to the domain
 
@@ -89,7 +89,7 @@ StateFlow`, fallible data ops return `Either<AppError, …>` via `catching`. Whe
 **After renaming or removing `catalog`, sweep the leftovers**: the old `core/navigation/CatalogNav.kt`
 facade, the `feature/catalog/schemas/` dir (rename its database-qualified subdir too), and the
 `Catalog`/`Product` running-example wording in the generated `CLAUDE.md`, `docs/ARCHITECTURE.md`, and
-`.claude/memory/` seed files (the blueprint copy in `ARCHITECTURE.md` uses `Catalog`/`Product` as its
+`.claude/rules/` files (the blueprint copy in `ARCHITECTURE.md` uses `Catalog`/`Product` as its
 example — repoint it at the new primary feature). Keep the Ktor remote seam intact when tailoring — if there is no real API yet,
 keep the DTO + mapper + `HttpClient` structure and back it with sample data behind the same
 interface, so the reference architecture survives.

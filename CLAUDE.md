@@ -12,7 +12,7 @@ golden literals (`com.acmecorp.acmeapp`, `AcmeApp`, `Acme`/`acme.`, the display 
 `dummyjson.com`) act as tokens. `scripts/generate.py` copies `template/` into an empty folder and
 replaces those literals with the user's identity (ordered longest-first to avoid substring
 collisions), relocates package directories, strips Firebase regions unless enabled, and writes
-`CLAUDE.md` / `docs/ARCHITECTURE.md` / seed memories. Feature modules are tailored to the user's
+`CLAUDE.md` / `docs/ARCHITECTURE.md` / `.claude/rules/`. Feature modules are tailored to the user's
 domain by cloning an archetype (`scripts/feature_ops.py`, mechanical identifier rename) and then
 wiring DI + navigation semantically (the `kmp-feature-author` agent, guided by the `kmp-blueprint`
 skill).

@@ -146,7 +146,14 @@ Real Gradle 9.4.1 builds on macOS, Android SDK present:
 3. `./gradlew staticAnalysis` (detekt + ktlint across all modules) → `BUILD SUCCESSFUL`.
 4. Firebase **on** generate → crash-reporter files kept, Firebase regions retained, no leftover
    sentinel markers; Firebase **off** → those whole files dropped.
-5. Codex-review batch (2026-07-15): replica build + host tests green after the feature-ops rewrite;
+5. Pre-publish batch (2026-07-15): template CI actions pinned to full commit SHAs (fetched live from
+   the tag refs), least-privilege `permissions:` added to every workflow, gitleaks install
+   checksum-verified (no more `curl | sudo tar`), `distributionSha256Sum` added to the Gradle
+   wrapper (sha fetched from services.gradle.org); Room builders split safe/destructive; seed
+   "memories" became `.claude/rules/` (auto-memory is machine-local, never read from a repo);
+   generation warns when prod ships the DummyJSON placeholder; positioning reworded to
+   "production-oriented architecture starter".
+6. Codex-review batch (2026-07-15): replica build + host tests green after the feature-ops rewrite;
    `clone` into an already-**built** project succeeds (was: `UnicodeDecodeError` + partial module);
    new-clone output diffed byte-identical to old-clone output for `catalog`/`home`/`capability` on a
    fresh project; cloned `:feature:events` compiles + its host tests pass when wired in; invalid
@@ -199,9 +206,11 @@ Re-run #1 as the regression gate after any generator change (commands in `CLAUDE
   consider validating/uniquifying.
 - **Bookworm review (2026-07-15, codex full review of a headless `/kmp-new` run)** — build was green;
   these are template/generator hardening items, not regressions. Triaged as generator fixes unless noted:
-  - *[High]* `core/database/RoomBuilders.kt` defaults to `fallbackToDestructiveMigration(dropAllTables =
-    true)` — silent data loss on a missing migration once features persist real user data. Gate
-    destructive recreation to debug, or document the DB as a disposable cache only.
+  - ~~*[High]* `core/database/RoomBuilders.kt` defaults to `fallbackToDestructiveMigration(dropAllTables =
+    true)` — silent data loss on a missing migration once features persist real user data.~~ FIXED
+    (2026-07-15): `buildDefault` is now migration-safe (fails at open on schema drift); destructive
+    recreation moved to an opt-in `buildDestructiveCache` used only by the catalog's remote-list
+    cache (documented in the blueprint's Room section).
   - *[Med]* Shipped `docs/ARCHITECTURE.md` is a verbatim copy of the blueprint, so it instructs the
     *generated* repo's user to run `scripts/feature_ops.py clone|capability` — but no `scripts/` dir is
     shipped in a generated project. The blueprint→ARCHITECTURE.md handoff must swap plugin-internal script

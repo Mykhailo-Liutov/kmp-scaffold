@@ -177,6 +177,11 @@ expect object CatalogDatabaseConstructor : RoomDatabaseConstructor<CatalogDataba
 The module applies `acme.room`; the platform Koin module builds the DB (Android needs a Context;
 iOS uses a documents path). Schemas are written under `feature/x/schemas/`.
 
+Two builders in `:core:database`: `buildDefault` (safe — a schema change without a migration fails
+at open) and `buildDestructiveCache` (drops ALL tables on schema change — disposable caches only,
+like the catalog's remote-list cache). Any database holding user data must use `buildDefault` and
+ship explicit `Migration`s when its `version` bumps.
+
 ## Adding a feature (checklist)
 
 1. **Scaffold the module** — ask Claude to "add a feature called events" (it clones the `catalog`

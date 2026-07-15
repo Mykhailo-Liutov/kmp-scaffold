@@ -63,8 +63,9 @@ Tests run on the JVM (android host) via `testAndroidHostTest`; iOS test executio
 project-wide in the `acme.kmp.library` convention, which already enables host tests for every module
 (`withHostTest {}`), so a new module with `commonTest` needs no extra opt-in.
 
-Network: the catalog points at `https://dummyjson.com/` (`AppConfig.baseUrl`) as a placeholder —
-swap for your real API.
+> **⚠️ Demo endpoint:** ALL flavors — **including prod** — ship pointing at the placeholder API
+> `https://dummyjson.com/`. Replace `BASE_URL` in `androidApp/src/{prod,stage}/…/FlavorConfig.kt`
+> and `APP_BASE_URL` in `iosApp/project.yml` with your real endpoints **before any release build**.
 
 ## iOS
 

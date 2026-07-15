@@ -207,30 +207,26 @@ def write_blueprint(target: Path, idn: Identity) -> None:
         )
 
 
-def seed_memories(target: Path) -> None:
-    mem = target / ".claude" / "memory"
-    mem.mkdir(parents=True, exist_ok=True)
-    (mem / "koin-modules-separate-file.md").write_text(
-        "---\nname: koin-modules-separate-file\n"
-        "description: Koin module { } definitions live in their own file in a di package\n"
-        "metadata:\n  type: project\n---\n\n"
+def seed_rules(target: Path) -> None:
+    """Project rules under .claude/rules/ — loaded by Claude Code alongside CLAUDE.md
+    (unlike .claude/memory, which is machine-local and never read from the repo)."""
+    rules = target / ".claude" / "rules"
+    rules.mkdir(parents=True, exist_ok=True)
+    (rules / "koin-modules-separate-file.md").write_text(
+        "# Koin modules live in their own file\n\n"
         "Never put a `module { }` beside a ViewModel/class. Each Koin module is its own file in a "
         "`di` package. Aggregate feature modules in `shared/.../Koin.kt#appModules()`.\n",
         encoding="utf-8",
     )
-    (mem / "cross-feature-navigation.md").write_text(
-        "---\nname: cross-feature-navigation\n"
-        "description: Features navigate via the core navigation interface facade\n"
-        "metadata:\n  type: project\n---\n\n"
+    (rules / "cross-feature-navigation.md").write_text(
+        "# Cross-feature navigation uses the core facade\n\n"
         "Cross-feature navigation goes through `:core:navigation`. Each feature exposes an `XNav` "
         "interface + `XNavImpl`; route keys stay `internal` to the feature module. The shell never "
         "sees another feature's route key.\n",
         encoding="utf-8",
     )
-    (mem / "domain-data-capability-split.md").write_text(
-        "---\nname: domain-data-capability-split\n"
-        "description: Cross-cutting capabilities split into :domain:x + :data:x; features stay single-module\n"
-        "metadata:\n  type: project\n---\n\n"
+    (rules / "domain-data-capability-split.md").write_text(
+        "# Capabilities split into :domain:x + :data:x\n\n"
         "A feature is one module (domain/data as packages inside it, e.g. `catalog`). A cross-cutting "
         "capability used by multiple features is split into `:domain:x` (model, repository interface, "
         "use cases, `XError : AppError`) + `:data:x` (implementation). Fallible ops return "
@@ -340,7 +336,7 @@ def main() -> int:
 
     make_executable(target / "gradlew")
     write_blueprint(target, idn)
-    seed_memories(target)
+    seed_rules(target)
     if cfg.get("git_init", True):
         git_init(target)
 
@@ -354,6 +350,10 @@ def main() -> int:
         print("  NOTE: replace placeholder google-services.json / GoogleService-Info.plist with real Firebase config,")
         print("        then wire the Firebase crash reporter (FirebaseCrashReporter / SwiftCrashReporter) into")
         print("        the Application + iOSApp.swift in place of the no-op default.")
+    if idn.base_url == "https://dummyjson.com/":
+        print("  WARNING: ALL flavors (including prod) point at the demo API https://dummyjson.com/.")
+        print("           Replace BASE_URL in androidApp/src/{prod,stage}/.../FlavorConfig.kt and")
+        print("           APP_BASE_URL in iosApp/project.yml with your real endpoints before any release.")
     return 0
 
 
