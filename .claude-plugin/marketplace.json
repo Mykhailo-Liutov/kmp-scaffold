@@ -1,13 +1,13 @@
 {
-  "name": "kmp-cmp-scaffold-marketplace",
-  "description": "Single-plugin marketplace for kmp-cmp-scaffold: generate production-oriented Kotlin Multiplatform + Compose Multiplatform apps tailored to your domain.",
+  "name": "kmp-scaffold-marketplace",
+  "description": "Single-plugin marketplace for kmp-scaffold: generate production-oriented Kotlin Multiplatform + Compose Multiplatform apps tailored to your domain.",
   "owner": {
     "name": "Mykhailo Liutov",
     "url": "https://github.com/Mykhailo-Liutov"
   },
   "plugins": [
     {
-      "name": "kmp-cmp-scaffold",
+      "name": "kmp-scaffold",
       "source": "./",
       "description": "Scaffold a new KMP/CMP app (Android + iOS) from a golden template, tailored to your domain."
     }

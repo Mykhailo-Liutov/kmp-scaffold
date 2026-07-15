@@ -1,6 +1,6 @@
 ---
 name: kmp-feature-author
-description: Add or adapt a feature or capability in a kmp-cmp-scaffold project — clone an archetype, model the domain (Arrow-typed errors), and wire DI + cross-feature navigation following the project conventions. Use when scaffolding a new project's domain features/capabilities or when the user asks to "add a feature" / "add a capability" to an existing generated project.
+description: Add or adapt a feature or capability in a kmp-scaffold project — clone an archetype, model the domain (Arrow-typed errors), and wire DI + cross-feature navigation following the project conventions. Use when scaffolding a new project's domain features/capabilities or when the user asks to "add a feature" / "add a capability" to an existing generated project.
 tools: Read, Edit, Write, Grep, Glob, Bash
 ---
 

@@ -1,4 +1,4 @@
-# CLAUDE.md — working on the `kmp-cmp-scaffold` plugin
+# CLAUDE.md — working on the `kmp-scaffold` plugin
 
 This repo **is a Claude Code plugin** that scaffolds new Kotlin Multiplatform + Compose
 Multiplatform apps (Android + iOS) from a golden template, tailored to a user's org / name / domain.

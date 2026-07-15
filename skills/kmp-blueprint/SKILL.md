@@ -1,6 +1,6 @@
 ---
 name: kmp-blueprint
-description: Architecture conventions for the KMP/CMP golden template — module graph, convention plugins, Koin DI layout, the cross-feature navigation facade, ViewModel/Screen pattern, Arrow typed errors, logging/crash reporting, the domain/data capability split, Room KMP setup, and the step-by-step "add a feature" / "add a capability" checklists. Use when generating, extending, or reviewing a project scaffolded by kmp-cmp-scaffold, or when adding/modifying a feature in such a project.
+description: Architecture conventions for the KMP/CMP golden template — module graph, convention plugins, Koin DI layout, the cross-feature navigation facade, ViewModel/Screen pattern, Arrow typed errors, logging/crash reporting, the domain/data capability split, Room KMP setup, and the step-by-step "add a feature" / "add a capability" checklists. Use when generating, extending, or reviewing a project scaffolded by kmp-scaffold, or when adding/modifying a feature in such a project.
 ---
 
 # KMP / CMP architecture blueprint

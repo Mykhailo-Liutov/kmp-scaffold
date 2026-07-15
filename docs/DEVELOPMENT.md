@@ -1,4 +1,4 @@
-# Development notes — `kmp-cmp-scaffold`
+# Development notes — `kmp-scaffold`
 
 Deep internals + rationale + roadmap for the generator. Pair with `CLAUDE.md` (quick orientation)
 and `README.md` (end-user docs).
@@ -6,7 +6,7 @@ and `README.md` (end-user docs).
 ## Goal
 
 Let someone — possibly not a mobile expert — drop into an empty folder, run
-`/kmp-cmp-scaffold:kmp-new`, answer a
+`/kmp-scaffold:kmp-new`, answer a
 short interview, and get the *generic architecture* of a private production KMP/CMP app (the
 golden source), tailored to their org / name / domain, that
 **compiles and runs with zero external accounts**. "Generic" = the golden project's app-specific
@@ -166,7 +166,7 @@ Re-run #1 as the regression gate after any generator change (commands in `CLAUDE
 
 ## Roadmap / open items
 
-- ~~**Live interview run**~~ DONE (2026-07-12): headless `claude -p "/kmp-cmp-scaffold:kmp-new ..."
+- ~~**Live interview run**~~ DONE (2026-07-12): headless `claude -p "/kmp-scaffold:kmp-new ..."
   --plugin-dir` run generated a travel-log app (`com.demoworks` / TripLog), the agent renamed
   catalog→trips with a real Trip domain + tests, and the Android build + JVM-host tests passed.
   Note: only the *fully qualified* command name resolves in headless runs.

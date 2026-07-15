@@ -1,4 +1,4 @@
-# kmp-cmp-scaffold
+# kmp-scaffold
 
 A Claude Code plugin that scaffolds a new **Kotlin Multiplatform + Compose Multiplatform** app
 (Android + iOS) from a production-oriented golden template — tailored to your organization, app
@@ -20,15 +20,15 @@ app-specific); the domain/data **capability split** is generated on demand.
 From GitHub:
 
 ```
-/plugin marketplace add Mykhailo-Liutov/kmp-cmp-scaffold
-/plugin install kmp-cmp-scaffold
+/plugin marketplace add Mykhailo-Liutov/kmp-scaffold
+/plugin install kmp-scaffold
 ```
 
 Or from a local clone:
 
 ```
-/plugin marketplace add /path/to/kmp-cmp-scaffold
-/plugin install kmp-cmp-scaffold
+/plugin marketplace add /path/to/kmp-scaffold
+/plugin install kmp-scaffold
 ```
 
 ## Use
@@ -36,7 +36,7 @@ Or from a local clone:
 In an **empty folder**, run:
 
 ```
-/kmp-cmp-scaffold:kmp-new
+/kmp-scaffold:kmp-new
 ```
 
 (Interactive sessions may also resolve the short form `/kmp-new`; the fully qualified name

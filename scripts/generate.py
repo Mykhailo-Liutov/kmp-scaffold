@@ -241,10 +241,10 @@ def git_init(target: Path) -> None:
             subprocess.run(["git", "init", "-q"], cwd=target, check=True)
         subprocess.run(["git", "add", "-A"], cwd=target, check=True)
         subprocess.run(
-            ["git", "commit", "-q", "-m", "Initial scaffold from kmp-cmp-scaffold"],
+            ["git", "commit", "-q", "-m", "Initial scaffold from kmp-scaffold"],
             cwd=target, check=True,
-            env={**os.environ, "GIT_AUTHOR_NAME": "kmp-cmp-scaffold",
-                 "GIT_AUTHOR_EMAIL": "scaffold@local", "GIT_COMMITTER_NAME": "kmp-cmp-scaffold",
+            env={**os.environ, "GIT_AUTHOR_NAME": "kmp-scaffold",
+                 "GIT_AUTHOR_EMAIL": "scaffold@local", "GIT_COMMITTER_NAME": "kmp-scaffold",
                  "GIT_COMMITTER_EMAIL": "scaffold@local"},
         )
     except (subprocess.CalledProcessError, FileNotFoundError) as e:
