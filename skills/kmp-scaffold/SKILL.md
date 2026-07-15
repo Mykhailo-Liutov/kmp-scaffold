@@ -90,7 +90,12 @@ StateFlow`, fallible data ops return `Either<AppError, …>` via `catching`. Whe
 facade, the `feature/catalog/schemas/` dir (rename its database-qualified subdir too), and the
 `Catalog`/`Product` running-example wording in the generated `CLAUDE.md`, `docs/ARCHITECTURE.md`, and
 `.claude/rules/` files (the blueprint copy in `ARCHITECTURE.md` uses `Catalog`/`Product` as its
-example — repoint it at the new primary feature). Keep the Ktor remote seam intact when tailoring — if there is no real API yet,
+example — repoint it at the new primary feature). The sweep is **behavioral, not just lexical**:
+after remodeling, `ARCHITECTURE.md`'s example must match the real use cases/graph signatures (no
+references to removed `Refresh<X>UseCase`-style code), the README module graph must list every
+module in `settings.gradle.kts`, and if the tailored domain stores **user-authored** data, the
+feature's platform database builders must be `buildDefault` (+ migrations), never
+`buildDestructiveCache` (see the blueprint's Room section). Keep the Ktor remote seam intact when tailoring — if there is no real API yet,
 keep the DTO + mapper + `HttpClient` structure and back it with sample data behind the same
 interface, so the reference architecture survives.
 

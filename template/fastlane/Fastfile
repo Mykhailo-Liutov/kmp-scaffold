@@ -1,7 +1,7 @@
 # iOS distribution lanes. STUB: lanes error until ASC app records, fastlane match,
 # and an App Store Connect API key (.p8) are set up. Uncomment the match/gym/pilot
-# steps in `distribute` when ready. Android stage uses the Gradle App Distribution
-# plugin (see .github/workflows/distribute-stage-android.yml), not fastlane.
+# steps in `distribute` when ready. Android stage distribution (Firebase App
+# Distribution via its Gradle plugin, when Firebase is enabled) is not fastlane's job.
 
 default_platform(:ios)
 

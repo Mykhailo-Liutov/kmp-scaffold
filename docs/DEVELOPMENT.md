@@ -145,18 +145,20 @@ Semantic wiring of a clone/capability is **not** in this script — the `kmp-fea
     drop" comment). The blueprint states the rule; the agent needs it as a hard checklist item —
     "local store holds user-authored data → `buildDefault` + migrations; destructive builder only
     for remote-derived caches" — plus a verify-step grep for `buildDestructiveCache` next to
-    write-path repositories.
+    write-path repositories. → FIXED (2026-07-15): hard rule + self-check greps added to
+    `agents/kmp-feature-author.md`; sweep rule added to the scaffold skill.
   - *[Med]* tailored `docs/ARCHITECTURE.md` is lexically renamed but semantically stale: it calls
     the journal a disposable remote-list cache, shows an `onItemClick` graph that no longer exists,
     and references a nonexistent `RefreshBrewsUseCase`. The agent's doc sweep must update the
     behavioral examples, not just identifiers (codex: this staleness likely *caused* the wrong
-    builder classification).
+    builder classification). → FIXED (2026-07-15): behavioral doc-sync step added to the agent
+    (verify identifiers exist, README module graph complete) + the skill's sweep paragraph.
   - *[Med]* `staticAnalysis` is a no-op gate (`ignoreFailures = true` in both Detekt.kt and
     Ktlint.kt) — reconfirms the existing non-gating item; also floods findings from generated
     Room/KSP sources (exclude `build/generated`).
   - *[Low]* `template/fastlane/Fastfile:4` references `.github/workflows/distribute-stage-android.yml`,
     a FIREBASE_ONLY file — Firebase-off projects get a comment pointing at a nonexistent workflow.
-    Reword the comment (or sentinel it).
+    Reword the comment (or sentinel it). → FIXED (2026-07-15): comment reworded, no file reference.
   - *[Low]* agent-written README module graph omitted `:core:navigation` + `:feature:settings`.
   - *[Low]* demo-endpoint guidance says "replace BASE_URL" but the tailored remote source returns
     built-in samples regardless — the README note should also say "implement the remote data source".

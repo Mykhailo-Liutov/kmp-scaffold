@@ -49,6 +49,23 @@ Read the blueprint at `${CLAUDE_PLUGIN_ROOT}/skills/kmp-blueprint/SKILL.md`, the
    types over encoded strings in entities (e.g. a Room type converter or a related table instead of
    joining a list into one delimited column).
 
+   **Choose the Room builder by data ownership — this is a hard rule.** If the local store holds
+   user-authored data (the user creates/edits records in the app), both platform database builders
+   (`<X>Database.android.kt` / `<X>Database.ios.kt`) MUST use `buildDefault`, and schema changes
+   need explicit `Migration`s. `buildDestructiveCache` is only for pure caches of remote data
+   (safe to drop and refetch). The catalog archetype ships as a remote-list cache — if your domain
+   turns it into user-owned data, switch both builders to `buildDefault` and fix the copied
+   "safe to drop" comment, which is now false.
+
+4. **Sync the docs — behavior, not just names.** The clone step renames identifiers in
+   `docs/ARCHITECTURE.md` / `CLAUDE.md` / `.claude/rules/`, but after you remodel the domain their
+   *examples* are stale. Update the running example so its use cases, graph signatures, and
+   data-flow description match what you actually built (no references to use cases you removed, no
+   obsolete callbacks). Keep the README module graph complete — every module in
+   `settings.gradle.kts`. If the remote data source serves sample data, say so in the README next
+   to the endpoint warning: going live requires implementing the remote source against the real
+   API — changing `BASE_URL` alone is not enough.
+
 ### Adding a capability (domain/data split)
 
 1. **Scaffold** the split:
@@ -72,6 +89,15 @@ Read the blueprint at `${CLAUDE_PLUGIN_ROOT}/skills/kmp-blueprint/SKILL.md`, the
 `./gradlew :androidApp:assembleProdDebug` (and `./gradlew check`). Fix compile errors — the usual
 culprits are a missing `appModules()` entry, a missing/renamed `<Class>Nav` facade, a missing
 capability `include`/dependency, or a dangling cross-feature callback. Re-run until green.
+
+Then self-check before reporting — a green build is not done:
+- `grep -rn buildDestructiveCache --include='*.kt'` — justify every hit as a disposable remote
+  cache; if a user-authored write path (an add/edit use case) feeds that store, it must be
+  `buildDefault` + migrations instead.
+- Spot-check every code identifier mentioned in `docs/ARCHITECTURE.md` and `README.md` against the
+  codebase — docs must not reference use cases, callbacks, or modules that don't exist.
+- The renamed/new feature must keep tests that exercise its real behavior (repository + ViewModel
+  at minimum), not just compile.
 
 ## Output
 
