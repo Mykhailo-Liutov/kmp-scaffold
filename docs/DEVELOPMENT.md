@@ -134,6 +134,34 @@ strips both modules + settings includes + shared dep + Koin entries.
 
 Semantic wiring of a clone/capability is **not** in this script — the `kmp-feature-author` agent does it.
 
+- **BrewLog smoke review (2026-07-15, post-v0.1.0 publish; self-review + codex second opinion of a
+  marketplace-installed end-to-end run).** Confirmed working in the wild: rename sweep clean (source
+  + docs + rules), feature tests generated (repo/remote/VM), offline sample seam (no blank-key
+  startup error), Koin/nav wiring defect-free, SHA-pinned CI + wrapper checksum delivered, iOS
+  Xcode build green. Plugin-attributable defects:
+  - *[High]* the **feature-author agent picked `buildDestructiveCache` for user-owned data**: the
+    journal repository declares local Room the source of truth for user-logged brews, yet both
+    platform builders kept the archetype's destructive cache builder (and its now-false "safe to
+    drop" comment). The blueprint states the rule; the agent needs it as a hard checklist item —
+    "local store holds user-authored data → `buildDefault` + migrations; destructive builder only
+    for remote-derived caches" — plus a verify-step grep for `buildDestructiveCache` next to
+    write-path repositories.
+  - *[Med]* tailored `docs/ARCHITECTURE.md` is lexically renamed but semantically stale: it calls
+    the journal a disposable remote-list cache, shows an `onItemClick` graph that no longer exists,
+    and references a nonexistent `RefreshBrewsUseCase`. The agent's doc sweep must update the
+    behavioral examples, not just identifiers (codex: this staleness likely *caused* the wrong
+    builder classification).
+  - *[Med]* `staticAnalysis` is a no-op gate (`ignoreFailures = true` in both Detekt.kt and
+    Ktlint.kt) — reconfirms the existing non-gating item; also floods findings from generated
+    Room/KSP sources (exclude `build/generated`).
+  - *[Low]* `template/fastlane/Fastfile:4` references `.github/workflows/distribute-stage-android.yml`,
+    a FIREBASE_ONLY file — Firebase-off projects get a comment pointing at a nonexistent workflow.
+    Reword the comment (or sentinel it).
+  - *[Low]* agent-written README module graph omitted `:core:navigation` + `:feature:settings`.
+  - *[Low]* demo-endpoint guidance says "replace BASE_URL" but the tailored remote source returns
+    built-in samples regardless — the README note should also say "implement the remote data source".
+  - *[Low]* iOS 15 target vs Skiko ICU 17.2 warning — already on the roadmap above.
+
 ## Test evidence (what's been validated)
 
 Real Gradle 9.4.1 builds on macOS, Android SDK present:
