@@ -173,3 +173,43 @@ Re-run #1 as the regression gate after any generator change (commands in `CLAUDE
   detail destination behind the list `onItemClick` (currently a stubbed no-op affordance).
 - **Prefix collision check**: `derive_identity` could collide two-word names to the same prefix;
   consider validating/uniquifying.
+- **Bookworm review (2026-07-15, codex full review of a headless `/kmp-new` run)** — build was green;
+  these are template/generator hardening items, not regressions. Triaged as generator fixes unless noted:
+  - *[High]* `core/database/RoomBuilders.kt` defaults to `fallbackToDestructiveMigration(dropAllTables =
+    true)` — silent data loss on a missing migration once features persist real user data. Gate
+    destructive recreation to debug, or document the DB as a disposable cache only.
+  - *[Med]* Shipped `docs/ARCHITECTURE.md` is a verbatim copy of the blueprint, so it instructs the
+    *generated* repo's user to run `scripts/feature_ops.py clone|capability` — but no `scripts/` dir is
+    shipped in a generated project. The blueprint→ARCHITECTURE.md handoff must swap plugin-internal script
+    calls for "ask Claude to add a feature called X". That same copy still teaches `Catalog*`/`Product*`
+    after a catalog→feature rename — extend the skill's post-rename sweep to `docs/ARCHITECTURE.md` + seed
+    memories, not just `CLAUDE.md`.
+  - *[Med]* `core/navigation/NavigationRoutes.kt` is a `data class … internal constructor` → Kotlin flags
+    the more-visible generated `copy()`; becomes an error at language version 2.5. Make it a plain class
+    (no data-class semantics needed) or align copy visibility.
+  - *[Med]* `androidApp/build.gradle.kts` release-signing gate keys on `taskNames.any {
+    it.contains("Release") }` (aggregate/custom tasks can still build an unsigned release) and reads
+    `storeFile = file(keystoreProps…)` relative to `androidApp/`, not the root that holds
+    `keystore.properties`. Validate the release *variant* at execution time and resolve with
+    `rootProject.file(...)`.
+  - *[Med]* CI `ios-build.yml` + `distribute-ios-testflight.yml` hardcode `runs-on: macstadium` (an
+    undocumented custom runner). Default to `macos-latest` or document the requirement; golden ships these.
+  - *[Med, partly upstream]* iOS `project.yml` `deploymentTarget: 15.0` while Skiko's ICU object is built
+    for iOS-sim 17.2 (end-to-end Xcode build warns). Verify the real supported iOS floor for the pinned
+    Compose Multiplatform and align the target.
+  - *[Med]* iOS is ARM-only with native tests disabled — add `iosX64` + KSP wiring so Room integration
+    tests can run on CI simulators (ties into the Android-only / target-matrix work above).
+  - *[Low]* `README.md` onboarding says wire new tabs into `RootNavHost` and manually enable host tests,
+    but tabs live in `MainScreen` and the convention plugin enables host tests globally — fix the drift.
+  - *[Low]* `shared/build.gradle.kts` uses `api(projects.feature.*)` (exports every feature to Android
+    consumers) and public Koin entry points leak into the ObjC `Shared.framework` — prefer `implementation`
+    and `internal`/`@HiddenFromObjC` unless the types are genuinely public API.
+  - *[Low]* Root `staticAnalysis` iterates `subprojects {}`, so the included `build-logic` build is never
+    linted despite the "all modules" claim — apply detekt/ktlint there too.
+  - Reconfirms the "Template hardening from generated-app reviews" bullet above: observe/`Flow` read path
+    still uncaught, one generic `<X>Error` conflates remote vs local failures, list `onItemClick` is a
+    no-op affordance.
+  - *Not a generator bug (by design):* the catalog→books rename stays cosmetic at the data seam (still
+    loads DummyJSON `products`, persists `price`). The reference points at dummyjson intentionally;
+    optionally have the tailoring agent reshape the DTO/domain fields to the domain noun, or state the
+    placeholder plainly in the generated docs.

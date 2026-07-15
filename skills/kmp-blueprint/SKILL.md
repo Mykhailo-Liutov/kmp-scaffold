@@ -179,9 +179,9 @@ iOS uses a documents path). Schemas are written under `feature/x/schemas/`.
 
 ## Adding a feature (checklist)
 
-1. **Clone an archetype** with `scripts/feature_ops.py clone --target . --archetype catalog --feature events --noun Event`
-   (use `--archetype home` for a screen with no data layer; omit `--noun`). This creates
-   `feature/events/**` with every identifier renamed.
+1. **Scaffold the module** — ask Claude to "add a feature called events" (it clones the `catalog`
+   full-data or `home` screen-only archetype and renames every identifier), or copy an existing
+   `feature/<x>/**` and rename its identifiers by hand. Either way you get `feature/events/**`.
 2. **settings.gradle.kts** — add `include(":feature:events")`.
 3. **shared/build.gradle.kts** — add `api(projects.feature.events)`.
 4. **core/navigation** — the cloned module references `EventsNav`; create the facade
@@ -197,12 +197,10 @@ iOS uses a documents path). Schemas are written under `feature/x/schemas/`.
 
 ## Adding a capability (domain/data split)
 
-```bash
-scripts/feature_ops.py capability --target . --capability billing --noun Invoice
-```
-Creates `domain/billing/**` (model, `BillingRepository`, use cases, `BillingError`,
-`billingDomainModule`) + `data/billing/**` (`InMemoryBillingRepository` stub, `billingDataModule`),
-tokenized to the project's identity. Then wire:
+Ask Claude to "add a capability called billing" — it clones the domain/data archetype, creating
+`domain/billing/**` (model, `BillingRepository`, use cases, `BillingError`, `billingDomainModule`) +
+`data/billing/**` (`InMemoryBillingRepository` stub, `billingDataModule`), tokenized to the project's
+identity. Then wire:
 
 1. **settings.gradle.kts** — `include(":domain:billing")` + `include(":data:billing")`.
 2. **shared/build.gradle.kts** — `implementation(projects.data.billing)` (binds the impl).

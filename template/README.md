@@ -48,7 +48,8 @@ di
    kotlin { androidLibrary { namespace = "com.acmecorp.acmeapp.feature.x" } }
    ```
 3. Add `xRoute` + `NavGraphBuilder.xGraph(...)`, screen, VM, `xModule` (Koin).
-4. Register `xModule` in `shared/.../Koin.kt#appModules()` and wire `xGraph(...)` into `RootNavHost`.
+4. Register `xModule` in `shared/.../Koin.kt#appModules()`, then wire the destination: a **tab** goes
+   in `MainScreen` (add a `MainTab` + call `xGraph(...)`), a **top-level flow** goes in `RootNavHost`.
 
 ## Build & run
 
@@ -59,8 +60,8 @@ di
 ```
 
 Tests run on the JVM (android host) via `testAndroidHostTest`; iOS test execution is disabled
-project-wide in the `acme.kmp.library` convention. A module with `commonTest` must opt into host
-tests by adding `withHostTest {}` to its `androidLibrary {}` block (see `:feature:catalog`).
+project-wide in the `acme.kmp.library` convention, which already enables host tests for every module
+(`withHostTest {}`), so a new module with `commonTest` needs no extra opt-in.
 
 Network: the catalog points at `https://dummyjson.com/` (`AppConfig.baseUrl`) as a placeholder —
 swap for your real API.

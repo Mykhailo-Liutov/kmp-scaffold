@@ -88,8 +88,9 @@ StateFlow`, fallible data ops return `Either<AppError, …>` via `catching`. Whe
 
 **After renaming or removing `catalog`, sweep the leftovers**: the old `core/navigation/CatalogNav.kt`
 facade, the `feature/catalog/schemas/` dir (rename its database-qualified subdir too), and the
-"clone the `catalog` archetype" wording in the generated `CLAUDE.md` (point it at the new primary
-feature instead). Keep the Ktor remote seam intact when tailoring — if there is no real API yet,
+`Catalog`/`Product` running-example wording in the generated `CLAUDE.md`, `docs/ARCHITECTURE.md`, and
+`.claude/memory/` seed files (the blueprint copy in `ARCHITECTURE.md` uses `Catalog`/`Product` as its
+example — repoint it at the new primary feature). Keep the Ktor remote seam intact when tailoring — if there is no real API yet,
 keep the DTO + mapper + `HttpClient` structure and back it with sample data behind the same
 interface, so the reference architecture survives.
 

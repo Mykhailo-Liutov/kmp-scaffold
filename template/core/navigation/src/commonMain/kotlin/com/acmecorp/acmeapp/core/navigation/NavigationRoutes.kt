@@ -7,7 +7,7 @@ import androidx.compose.runtime.staticCompositionLocalOf
  * binding (internal constructor — only `coreNavigationModule` may create it) and
  * exposed to the Compose tree via [LocalNavigationRoutes].
  */
-data class NavigationRoutes internal constructor(
+class NavigationRoutes internal constructor(
     val homeNav: HomeNav,
     val catalogNav: CatalogNav,
     val profileNav: ProfileNav,

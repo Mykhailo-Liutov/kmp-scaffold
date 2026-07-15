@@ -11,7 +11,7 @@ concurrency:
 jobs:
   ios-build:
     name: Build iOS (simulator)
-    runs-on: macstadium
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
 
