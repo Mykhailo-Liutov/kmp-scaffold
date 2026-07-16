@@ -2,7 +2,8 @@
 
 ## 0.1.1 — 2026-07-16
 
-Hardening from the BrewLog end-to-end smoke review (self-audit + Codex second opinion):
+Hardening from an end-to-end smoke review of a generated app (self-audit + independent
+second-opinion audit):
 
 - Feature-author agent: hard data-ownership rule (user-authored local data → migration-safe
   `buildDefault`, destructive builder only for remote caches) with a pre-report self-check;
