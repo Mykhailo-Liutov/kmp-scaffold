@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.1.1 — 2026-07-16
+
+Hardening from the BrewLog end-to-end smoke review (self-audit + Codex second opinion):
+
+- Feature-author agent: hard data-ownership rule (user-authored local data → migration-safe
+  `buildDefault`, destructive builder only for remote caches) with a pre-report self-check;
+  behavioral doc-sync step (architecture examples must match real code, complete README module
+  graph, sample-backed remote sources flagged).
+- Scaffold skill: post-rename sweep is behavioral, not just lexical.
+- Template: Fastfile no longer references the Firebase-only stage workflow in
+  Firebase-off projects.
+
 ## 0.1.0 — 2026-07-15
 
 Initial public release (beta).
